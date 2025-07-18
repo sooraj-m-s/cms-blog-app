@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, Text, ForeignKey, DateTime, Boolean
 from datetime import datetime, timezone
 from sqlalchemy import UniqueConstraint
-from .base import Base
+from ..db.base import Base
 
 
 class Feedback(Base):
@@ -23,7 +23,7 @@ class View(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
-    __table_args__ = (UniqueConstraint('user_id', 'blog_id', name='uq_likes_user_blog'),)
+    __table_args__ = (UniqueConstraint('user_id', 'blog_id', name='uq_views_user_blog'),)
 
 
 class Like(Base):
@@ -36,5 +36,5 @@ class Like(Base):
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
-    __table_args__ = (UniqueConstraint('user_id', 'blog_id', name='uq_views_user_blog'),)
+    __table_args__ = (UniqueConstraint('user_id', 'blog_id', name='uq_likes_user_blog'),)
 

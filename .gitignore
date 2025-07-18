@@ -4,3 +4,5 @@ __pycache__/
 *.pyd
 *.pyc
 env_blog_app/ 
+
+.env

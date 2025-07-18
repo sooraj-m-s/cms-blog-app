@@ -1,13 +1,35 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile, Form, File
 from sqlalchemy.orm import Session
-from app.core.config import get_db
+from app.db.database import get_db
 from app.services.blog_service import BlogService
+from app.models.user import User
+from app.dependencies import get_current_user as cu
 
 
 router = APIRouter()
 
 @router.get("/landing/")
-def get_landing_page(db: Session = Depends(get_db)):
+def get_landing_page(db: Session = Depends(get_db), current_user: User = Depends(cu)):
     blog_service = BlogService(db)
     return {"blogs": blog_service.get_all_blogs()}
+
+
+@router.post("/blogs/")
+async def create_blog(title: str = Form(...), content: str = Form(...), image: UploadFile = File(None), db: Session = Depends(get_db), current_user: User = Depends(cu)):
+    blog_service = BlogService(db)
+    image_data = await image.read() if image else None
+    return blog_service.create_blog(current_user.id, title, content, image_data)
+
+
+@router.get("/blogs/")
+def list_user_blogs(db: Session = Depends(get_db), current_user: User = Depends(cu)):
+    blog_service = BlogService(db)
+    return {"blogs": blog_service.get_user_blogs(current_user.id)}
+
+
+@router.put("/blogs/{blog_id}")
+async def edit_blog(blog_id: int, title: str = Form(None), content: str = Form(None), image: UploadFile = File(None), db: Session = Depends(get_db), current_user: User = Depends(cu)):
+    blog_service = BlogService(db)
+    image_data = await image.read() if image else None
+    return blog_service.edit_blog(blog_id, current_user.id, title, content, image_data)
 

@@ -1,17 +1,11 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from decouple import config
 
 
-DATABASE_URL = "postgresql://my_user:my_user@localhost:5432/blog_app"
-SECRET_KEY = "your-very-secure-secret-key-here"
+DATABASE_URL = config("DATABASE_URL")
+SECRET_KEY = config("SECRET_KEY")
 
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY")
+AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_KEY")
+AWS_REGION = config("AWS_REGION_NAME")
+AWS_BUCKET_NAME = config("AWS_BUCKET_NAME")
 
