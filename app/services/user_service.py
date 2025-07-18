@@ -13,6 +13,7 @@ class UserService:
     def __init__(self, db: Session):
         self.db = db
 
+
     def register_user(self, user_data: dict):
         db_user = self.db.query(User).filter(User.email == user_data["email"]).first()
         if db_user:
@@ -33,6 +34,7 @@ class UserService:
         self.db.commit()
         self.db.refresh(new_user)
         return {"message": "User registered successfully", "user_id": new_user.id}
+
 
     def login_user(self, email: str, password: str):
         db_user = self.db.query(User).filter(User.email == email).first()

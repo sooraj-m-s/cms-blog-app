@@ -4,6 +4,7 @@ from app.db.database import get_db
 from app.services.blog_service import BlogService
 from app.models.user import User
 from app.dependencies import get_current_user as cu
+from app.schemas.blog_schema import FeedbackCreate
 
 
 router = APIRouter()
@@ -32,4 +33,34 @@ async def edit_blog(blog_id: int, title: str = Form(None), content: str = Form(N
     blog_service = BlogService(db)
     image_data = await image.read() if image else None
     return blog_service.edit_blog(blog_id, current_user.id, title, content, image_data)
+
+
+@router.post("/blogs/{blog_id}/like")
+def like_or_unlike_blog(blog_id: int, db: Session = Depends(get_db), current_user: User = Depends(cu)):
+    blog_service = BlogService(db)
+    return blog_service.like_or_unlike_blog(blog_id, current_user.id)
+
+
+@router.post("/blogs/{blog_id}/dislike")
+def dislike_or_undislike_blog(blog_id: int, db: Session = Depends(get_db), current_user: User = Depends(cu)):
+    blog_service = BlogService(db)
+    return blog_service.dislike_or_undislike_blog(blog_id, current_user.id)
+
+
+@router.post("/blogs/{blog_id}/feedback")
+def create_feedback(blog_id: int, feedback: FeedbackCreate, db: Session = Depends(get_db), current_user: User = Depends(cu)):
+    blog_service = BlogService(db)
+    return blog_service.create_feedback(blog_id, current_user.id, feedback.comment)
+
+
+@router.put("/blogs/feedback/{feedback_id}")
+def edit_feedback(feedback_id: int, feedback: FeedbackCreate, db: Session = Depends(get_db), current_user: User = Depends(cu)):
+    blog_service = BlogService(db)
+    return blog_service.edit_feedback(feedback_id, current_user.id, feedback.comment)
+
+
+@router.delete("/blogs/feedback/{feedback_id}")
+def delete_feedback(feedback_id: int, db: Session = Depends(get_db), current_user: User = Depends(cu)):
+    blog_service = BlogService(db)
+    return blog_service.delete_feedback(feedback_id, current_user.id)
 

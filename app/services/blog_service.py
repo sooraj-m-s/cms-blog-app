@@ -1,8 +1,9 @@
 from sqlalchemy.orm import Session
 import boto3
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import HTTPException
 from app.models.blog import Blog
+from app.models.feedback import Like, Feedback
 from app.core.config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_BUCKET_NAME
 
 
@@ -16,11 +17,13 @@ class BlogService:
             region_name=AWS_REGION
         )
 
+
     def get_all_blogs(self):
         blogs = self.db.query(Blog).all()
         return [{"id": blog.id, "title": blog.title, "content": blog.content, "image_url": blog.image_url,
                  "read_count": blog.read_count, "created_at": blog.created_at, "updated_at": blog.updated_at}
                 for blog in blogs]
+
 
     def create_blog(self, author_id: int, title: str, content: str, image: bytes = None):
         if self.db.query(Blog).filter(Blog.title == title).first():
@@ -36,11 +39,13 @@ class BlogService:
         self.db.refresh(blog)
         return {"message": "Blog created successfully", "blog_id": blog.id}
 
+
     def get_user_blogs(self, author_id: int):
         blogs = self.db.query(Blog).filter(Blog.author_id == author_id).all()
         return [{"id": blog.id, "title": blog.title, "content": blog.content, "image_url": blog.image_url,
                  "read_count": blog.read_count, "created_at": blog.created_at, "updated_at": blog.updated_at}
                 for blog in blogs]
+
 
     def edit_blog(self, blog_id: int, author_id: int, title: str = None, content: str = None, image: bytes = None):
         blog = self.db.query(Blog).filter(Blog.id == blog_id, Blog.author_id == author_id).first()
@@ -63,4 +68,99 @@ class BlogService:
         self.db.commit()
         self.db.refresh(blog)
         return {"message": "Blog updated successfully"}
+
+
+    def like_or_unlike_blog(self, blog_id: int, user_id: int):
+        blog = self.db.query(Blog).filter(Blog.id == blog_id).first()
+        if not blog:
+            raise HTTPException(status_code=404, detail="Blog not found")
+
+        # Check if the user has already liked/disliked the blog
+        existing_like = self.db.query(Like).filter(Like.blog_id == blog_id, Like.user_id == user_id).first()
+
+        if existing_like:
+            if existing_like.is_like:
+                self.db.delete(existing_like)  # Unlike (remove the like)
+                self.db.commit()
+                return {"message": "Blog unliked"}
+            else:
+                existing_like.is_like = True  # Change dislike to like
+                existing_like.updated_at = datetime.now(timezone.utc)
+                self.db.commit()
+                self.db.refresh(existing_like)
+                return {"message": "Blog liked"}
+        else:
+            new_like = Like(blog_id=blog_id, user_id=user_id, is_like=True)
+            self.db.add(new_like)
+            self.db.commit()
+            self.db.refresh(new_like)
+            return {"message": "Blog liked successfully"}
+
+
+    def dislike_or_undislike_blog(self, blog_id: int, user_id: int):
+        blog = self.db.query(Blog).filter(Blog.id == blog_id).first()
+        if not blog:
+            raise HTTPException(status_code=404, detail="Blog not found")
+
+        # Check if the user has already liked/disliked the blog
+        existing_dislike = self.db.query(Like).filter(Like.blog_id == blog_id, Like.user_id == user_id).first()
+
+        if existing_dislike:
+            if existing_dislike.is_like:
+                existing_dislike.is_like = False  # Change like to dislike
+                existing_dislike.updated_at = datetime.now(timezone.utc)
+                self.db.commit()
+                self.db.refresh(existing_dislike)
+                return {"message": "Blog disliked"}
+            else:
+                self.db.delete(existing_dislike)  # Dislike (remove the like)
+                self.db.commit()
+                return {"message": "Blog undisliked"}
+        else:
+            new_dislike = Like(blog_id=blog_id, user_id=user_id, is_like=False)
+            self.db.add(new_dislike)
+            self.db.commit()
+            self.db.refresh(new_dislike)
+            return {"message": "Blog disliked successfully"}
+
+
+    def create_feedback(self, blog_id: int, user_id: int, comment: str):
+        blog = self.db.query(Blog).filter(Blog.id == blog_id).first()
+        if not blog:
+            raise HTTPException(status_code=404, detail="Blog not found")
+        if not comment.strip():
+            raise HTTPException(status_code=400, detail="Comment cannot be empty")
+        existing_feedback = self.db.query(Feedback).filter(Feedback.blog_id == blog_id, Feedback.user_id == user_id).first()
+        if existing_feedback:
+            raise HTTPException(status_code=400, detail="User can only provide one feedback per blog")
+
+        new_feedback = Feedback(blog_id=blog_id, user_id=user_id, comment=comment)
+        self.db.add(new_feedback)
+        self.db.commit()
+        self.db.refresh(new_feedback)
+        return {"message": "Feedback created successfully", "feedback_id": new_feedback.id}
+
+
+    def edit_feedback(self, feedback_id: int, user_id: int, comment: str):
+        feedback = self.db.query(Feedback).filter(Feedback.id == feedback_id, Feedback.user_id == user_id).first()
+        if not feedback:
+            raise HTTPException(status_code=404, detail="Feedback not found or unauthorized")
+        if not comment.strip():
+            raise HTTPException(status_code=400, detail="Comment cannot be empty")
+
+        feedback.comment = comment
+        feedback.updated_at = datetime.now(timezone.utc)
+        self.db.commit()
+        self.db.refresh(feedback)
+        return {"message": "Feedback updated successfully"}
+
+
+    def delete_feedback(self, feedback_id: int, user_id: int):
+        feedback = self.db.query(Feedback).filter(Feedback.id == feedback_id, Feedback.user_id == user_id).first()
+        if not feedback:
+            raise HTTPException(status_code=404, detail="Feedback not found or unauthorized")
+
+        self.db.delete(feedback)
+        self.db.commit()
+        return {"message": "Feedback deleted successfully"}
 
