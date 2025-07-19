@@ -8,10 +8,20 @@ from decouple import config as env_config
 
 
 # This is the Alembic environment script.
-THIS_DIR = os.path.dirname(__file__)
-APP_DIR = os.path.abspath(os.path.join(THIS_DIR, ".."))
-if APP_DIR not in sys.path:
-    sys.path.insert(0, APP_DIR)
+CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
+APP_DIR = os.path.dirname(CURRENT_DIR)
+PROJECT_ROOT = os.path.dirname(APP_DIR)
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+
+from app.db.base import Base
+
+from app.models.user import User
+from app.models.logout import Logout
+from app.models.blog import Blog
+from app.models.feedback import Feedback, View, Like
+
 
 
 # this is the Alembic Config object, which provides
@@ -27,8 +37,6 @@ alembic_config.set_main_option("sqlalchemy.url", DATABASE_URL)
 if alembic_config.config_file_name is not None:
     fileConfig(alembic_config.config_file_name)
 
-
-from db import Base
 
 # add your model's MetaData object here
 # for 'autogenerate' support

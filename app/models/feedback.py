@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, Text, ForeignKey, DateTime, Boolean
 from datetime import datetime, timezone
 from sqlalchemy import UniqueConstraint
-from ..db.base import Base
+from app.db.base import Base
 
 
 class Feedback(Base):
@@ -12,7 +12,9 @@ class Feedback(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     comment = Column(Text, nullable=False)
     is_listed = Column(Boolean, default=False)
+    is_deleted = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
 
 class View(Base):

@@ -1,9 +1,10 @@
 from sqlalchemy.orm import Session
-from app.models.user import User
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
 from app.core.config import SECRET_KEY
+from app.models.user import User
+from app.models.logout import Logout
 import jwt
 
 
@@ -48,4 +49,15 @@ class UserService:
             algorithm="HS256"
         )
         return {"access_token": access_token, "token_type": "bearer"}
+
+
+    def logout_user(self, token: str, db: Session):
+        existing_logout = db.query(Logout).filter(Logout.token == token).first()
+        if existing_logout:
+            raise HTTPException(status_code=400, detail="Token already revoked")
+
+        revoked_token = Logout(token=token)
+        db.add(revoked_token)
+        db.commit()
+        return {"message": "Logged out successfully"}
 

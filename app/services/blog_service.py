@@ -160,7 +160,8 @@ class BlogService:
         if not feedback:
             raise HTTPException(status_code=404, detail="Feedback not found or unauthorized")
 
-        self.db.delete(feedback)
+        feedback.is_deleted = True
+        feedback.updated_at = datetime.now(timezone.utc)
         self.db.commit()
         return {"message": "Feedback deleted successfully"}
 

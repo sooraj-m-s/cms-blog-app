@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
-from ..db.base import Base
+from app.db.base import Base
 
 
 class Blog(Base):
