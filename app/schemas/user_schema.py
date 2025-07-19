@@ -8,7 +8,7 @@ class UserRegister(BaseModel):
     confirm_password: str
 
 
-class UserLogin(BaseModel):
+class Login(BaseModel):
     email: EmailStr
     password: str
 
