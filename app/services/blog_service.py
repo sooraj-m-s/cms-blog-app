@@ -3,7 +3,7 @@ import boto3
 from datetime import datetime, timezone
 from fastapi import HTTPException
 from app.models.blog import Blog
-from app.models.feedback import Like, Feedback
+from app.models.feedback import Like, Feedback, View
 from app.core.config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_BUCKET_NAME
 
 
@@ -18,8 +18,17 @@ class BlogService:
         )
 
 
-    def get_all_blogs(self):
-        blogs = self.db.query(Blog).all()
+    def get_all_blogs(self, user_id: int):
+        blogs = self.db.query(Blog).filter(Blog.is_deleted == False, Blog.is_blocked == False).all()
+
+        # Increment read count if the user has not viewed the blog before
+        for blog in blogs:
+            existing_view = self.db.query(View).filter(View.blog_id == blog.id, View.user_id == user_id).first()
+            if not existing_view:
+                blog.read_count += 1
+                new_view = View(blog_id=blog.id, user_id=user_id)
+                self.db.add(new_view)
+                self.db.commit()
         return [{"id": blog.id, "title": blog.title, "content": blog.content, "image_url": blog.image_url,
                  "read_count": blog.read_count, "created_at": blog.created_at, "updated_at": blog.updated_at}
                 for blog in blogs]
@@ -70,12 +79,26 @@ class BlogService:
         return {"message": "Blog updated successfully"}
 
 
+    def delete_blog(self, blog_id: int, author_id: int):
+        blog = self.db.query(Blog).filter(Blog.id == blog_id, Blog.author_id == author_id).first()
+        if not blog:
+            raise HTTPException(status_code=404, detail="Blog not found or unauthorized")
+        if blog.is_deleted:
+            raise HTTPException(status_code=400, detail="Blog is already deleted")
+        if blog.image_url:
+            image_key = blog.image_url.split(f"{AWS_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/")[-1]
+            self.s3.delete_object(Bucket=AWS_BUCKET_NAME, Key=image_key)
+
+        blog.is_deleted = True
+        self.db.commit()
+        return {"message": "Blog deleted successfully"}
+
+
     def like_or_unlike_blog(self, blog_id: int, user_id: int):
         blog = self.db.query(Blog).filter(Blog.id == blog_id).first()
         if not blog:
             raise HTTPException(status_code=404, detail="Blog not found")
 
-        # Check if the user has already liked/disliked the blog
         existing_like = self.db.query(Like).filter(Like.blog_id == blog_id, Like.user_id == user_id).first()
 
         if existing_like:
@@ -102,7 +125,6 @@ class BlogService:
         if not blog:
             raise HTTPException(status_code=404, detail="Blog not found")
 
-        # Check if the user has already liked/disliked the blog
         existing_dislike = self.db.query(Like).filter(Like.blog_id == blog_id, Like.user_id == user_id).first()
 
         if existing_dislike:

@@ -12,7 +12,7 @@ router = APIRouter()
 @router.get("/landing/")
 def get_landing_page(db: Session = Depends(get_db), current_user: User = Depends(cu)):
     blog_service = BlogService(db)
-    return {"blogs": blog_service.get_all_blogs()}
+    return {"blogs": blog_service.get_all_blogs(current_user.id)}
 
 
 @router.post("/blogs/")
@@ -33,6 +33,12 @@ async def edit_blog(blog_id: int, title: str = Form(None), content: str = Form(N
     blog_service = BlogService(db)
     image_data = await image.read() if image else None
     return blog_service.edit_blog(blog_id, current_user.id, title, content, image_data)
+
+
+@router.patch("/blogs/{blog_id}/delete/")
+def delete_blog(blog_id: int, db: Session = Depends(get_db), current_user: User = Depends(cu)):
+    blog_service = BlogService(db)
+    return blog_service.delete_blog(blog_id, current_user.id)
 
 
 @router.post("/blogs/{blog_id}/like")
