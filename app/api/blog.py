@@ -53,6 +53,12 @@ def dislike_or_undislike_blog(blog_id: int, db: Session = Depends(get_db), curre
     return blog_service.dislike_or_undislike_blog(blog_id, current_user.id)
 
 
+@router.get("/blogs/{blog_id}/feedbacks")
+def get_feedbacks(blog_id: int, db: Session = Depends(get_db), current_user: User = Depends(cu)):
+    blog_service = BlogService(db)
+    return blog_service.get_feedbacks(blog_id, current_user.id)
+
+
 @router.post("/blogs/{blog_id}/feedback")
 def create_feedback(blog_id: int, feedback: FeedbackCreate, db: Session = Depends(get_db), current_user: User = Depends(cu)):
     blog_service = BlogService(db)

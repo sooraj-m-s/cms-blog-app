@@ -8,7 +8,7 @@ from app.models.logout import Logout
 import jwt
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
@@ -23,6 +23,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         user = db.query(User).filter(User.email == email).first()
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
+        if user.is_blocked:
+            raise HTTPException(status_code=403, detail="Account is blocked, please contact support!")
         return user
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")

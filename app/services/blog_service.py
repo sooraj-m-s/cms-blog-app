@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 import boto3
 from datetime import datetime, timezone
 from fastapi import HTTPException
+from sqlalchemy import func
+from app.models.user import User
 from app.models.blog import Blog
 from app.models.feedback import Like, Feedback, View
 from app.core.config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_BUCKET_NAME
@@ -29,9 +31,33 @@ class BlogService:
                 new_view = View(blog_id=blog.id, user_id=user_id)
                 self.db.add(new_view)
                 self.db.commit()
-        return [{"id": blog.id, "title": blog.title, "content": blog.content, "image_url": blog.image_url,
-                 "read_count": blog.read_count, "created_at": blog.created_at, "updated_at": blog.updated_at}
-                for blog in blogs]
+
+        # Fetch feedback and like/unlike counts
+        feedback_counts = {row[0]: row[1] for row in self.db.query(Feedback.blog_id, func.count(Feedback.id))
+                         .filter(Feedback.is_deleted == False, Feedback.is_listed == True)
+                         .group_by(Feedback.blog_id).all()}
+        like_counts = {row[0]: row[1] for row in self.db.query(Like.blog_id, func.count(Like.id))
+                      .filter(Like.is_like == True)
+                      .group_by(Like.blog_id).all()}
+        dislike_counts = {row[0]: row[1] for row in self.db.query(Like.blog_id, func.count(Like.id))
+                         .filter(Like.is_like == False)
+                         .group_by(Like.blog_id).all()}
+
+        return [
+            {
+                "id": blog.id,
+                "title": blog.title,
+                "content": blog.content,
+                "image_url": blog.image_url,
+                "read_count": blog.read_count,
+                "feedback_count": feedback_counts.get(blog.id, 0),
+                "like_count": like_counts.get(blog.id, 0),
+                "dislike_count": dislike_counts.get(blog.id, 0),
+                "created_at": blog.created_at,
+                "updated_at": blog.updated_at
+            }
+            for blog in blogs
+        ]
 
 
     def create_blog(self, author_id: int, title: str, content: str, image: bytes = None):
@@ -50,7 +76,7 @@ class BlogService:
 
 
     def get_user_blogs(self, author_id: int):
-        blogs = self.db.query(Blog).filter(Blog.author_id == author_id).all()
+        blogs = self.db.query(Blog).filter(Blog.author_id == author_id, Blog.is_deleted == False).all()
         return [{"id": blog.id, "title": blog.title, "content": blog.content, "image_url": blog.image_url,
                  "read_count": blog.read_count, "created_at": blog.created_at, "updated_at": blog.updated_at}
                 for blog in blogs]
@@ -61,7 +87,7 @@ class BlogService:
         if not blog:
             raise HTTPException(status_code=404, detail="Blog not found or unauthorized")
         if title:
-            if self.db.query(Blog).filter(Blog.title == title).first():
+            if self.db.query(Blog).filter(Blog.title == title, Blog.id != blog_id).first():
                 raise HTTPException(status_code=400, detail="Blog title already exists")
             blog.title = title
         if content:
@@ -146,13 +172,33 @@ class BlogService:
             return {"message": "Blog disliked successfully"}
 
 
+    def get_feedbacks(self, blog_id: int, current_user: User):
+        blog = self.db.query(Blog).filter(Blog.id == blog_id).first()
+        if not blog:
+            raise HTTPException(status_code=404, detail="Blog not found")
+        feedbacks = self.db.query(Feedback).filter(Feedback.blog_id == blog_id, Feedback.is_deleted == False, Feedback.is_listed == True).all()
+
+        return [
+            {
+                "id": feedback.id,
+                "is_current_user_feedback": feedback.user_id == current_user,
+                "username": self.db.query(User).filter(User.id == feedback.user_id).first().full_name, 
+                "comment": feedback.comment,
+                "is_listed": feedback.is_listed, 
+                "created_at": feedback.created_at,
+                "updated_at": feedback.updated_at
+            }
+            for feedback in feedbacks
+        ]
+
+
     def create_feedback(self, blog_id: int, user_id: int, comment: str):
         blog = self.db.query(Blog).filter(Blog.id == blog_id).first()
         if not blog:
             raise HTTPException(status_code=404, detail="Blog not found")
         if not comment.strip():
             raise HTTPException(status_code=400, detail="Comment cannot be empty")
-        existing_feedback = self.db.query(Feedback).filter(Feedback.blog_id == blog_id, Feedback.user_id == user_id).first()
+        existing_feedback = self.db.query(Feedback).filter(Feedback.blog_id == blog_id, Feedback.user_id == user_id, Feedback.is_deleted == "False").first()
         if existing_feedback:
             raise HTTPException(status_code=400, detail="User can only provide one feedback per blog")
 

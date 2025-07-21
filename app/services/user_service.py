@@ -41,6 +41,8 @@ class UserService:
         db_user = self.db.query(User).filter(User.email == email).first()
         if not db_user or not pwd_context.verify(password, db_user.password):
             raise HTTPException(status_code=401, detail="Invalid credentials")
+        if db_user.is_blocked:
+            raise HTTPException(status_code=403, detail="Account is blocked, please contact support!")
 
         access_token_expires = timedelta(days=2)
         access_token = jwt.encode(
