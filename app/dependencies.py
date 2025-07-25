@@ -45,7 +45,7 @@ async def get_current_admin(token: str = Depends(oauth2_scheme), db: Session = D
         user = db.query(User).filter(User.email == email).first()
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
-        if not user.is_admin:  # Check if the user is an admin
+        if not user.is_admin:
             raise HTTPException(status_code=403, detail="Admin access required")
         return user
     except jwt.ExpiredSignatureError:

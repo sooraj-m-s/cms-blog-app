@@ -21,6 +21,7 @@ from app.models.user import User
 from app.models.logout import Logout
 from app.models.blog import Blog
 from app.models.feedback import Feedback, View, Like
+from app.models.refresh_token import RefreshToken
 
 
 # this is the Alembic Config object, which provides

@@ -6,6 +6,7 @@ from app.core.config import SECRET_KEY
 from app.models.user import User
 from app.models.logout import Logout
 from app.models.refresh_token import RefreshToken
+from app.schemas.user_schema import TokenRefreshRequest
 import jwt
 
 
@@ -103,19 +104,24 @@ class UserService:
             raise HTTPException(status_code=500, detail=f"Logout failed: {str(e)}")
 
 
-def refresh_token(self, refresh_token: str, db: Session):
+    def refresh_token(self, refresh_token: TokenRefreshRequest, db: Session):
         try:
             # Verify refresh token
-            payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=["HS256"])
+            token_str = refresh_token.refresh_token
+            payload = jwt.decode(token_str, SECRET_KEY, algorithms=["HS256"])
             email = payload.get("sub")
             if not email or payload.get("type") != "refresh":
                 raise HTTPException(status_code=401, detail="Invalid refresh token")
 
             # Check if refresh token exists and is not revoked
-            token_entry = db.query(RefreshToken).filter(RefreshToken.token == refresh_token).first()
-            if not token_entry or token_entry.expires_at < datetime.now(timezone.utc):
-                raise HTTPException(status_code=401, detail="Refresh token invalid or expired")
-            revoked_token = db.query(Logout).filter(Logout.token == refresh_token).first()
+            token_entry = db.query(RefreshToken).filter(RefreshToken.token == token_str).first()
+            if not token_entry:
+                raise HTTPException(status_code=401, detail="Refresh token not found")
+            # Convert expires_at to aware datetime for comparison
+            expires_at = token_entry.expires_at.replace(tzinfo=timezone.utc) if token_entry.expires_at else datetime.min.replace(tzinfo=timezone.utc)
+            if expires_at < datetime.now(timezone.utc):
+                raise HTTPException(status_code=401, detail="Refresh token expired")
+            revoked_token = db.query(Logout).filter(Logout.token == token_str).first()
             if revoked_token:
                 raise HTTPException(status_code=401, detail="Refresh token revoked")
 
@@ -133,7 +139,6 @@ def refresh_token(self, refresh_token: str, db: Session):
                 algorithm="HS256"
             )
 
-            # Revoke old refresh token and issue a new one
             db.delete(token_entry)
             new_refresh_token_expires = timedelta(days=30)
             new_refresh_token = jwt.encode(
@@ -148,7 +153,11 @@ def refresh_token(self, refresh_token: str, db: Session):
                 expires_at=datetime.now(timezone.utc) + new_refresh_token_expires
             )
             db.add(new_refresh_token_entry)
-            db.commit()
+            try:
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
             return {
                 "access_token": new_access_token,
