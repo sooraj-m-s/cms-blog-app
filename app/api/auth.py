@@ -21,6 +21,7 @@ def login(user: Login, db: Session = Depends(get_db)):
     user_service = UserService(db)
     return user_service.login_user(user.email, user.password)
 
+
 @router.post("/logout/")
 def logout(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     user_service = UserService(db)
@@ -31,4 +32,10 @@ def logout(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
 def admin_login(user: Login, db: Session = Depends(get_db)):
     admin_service = AdminService(db)
     return admin_service.admin_login_user(user.email, user.password)
+
+
+@router.post("/refresh/")
+def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
+    user_service = UserService(db)
+    return user_service.refresh_token(refresh_token, db)
 

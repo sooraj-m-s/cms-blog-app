@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from app.core.config import SECRET_KEY
 from app.models.user import User
 from app.models.logout import Logout
+from app.models.refresh_token import RefreshToken
 import jwt
 
 
@@ -44,22 +45,118 @@ class UserService:
         if db_user.is_blocked:
             raise HTTPException(status_code=403, detail="Account is blocked, please contact support!")
 
-        access_token_expires = timedelta(days=2)
+        access_token_expires = timedelta(minutes=15)
         access_token = jwt.encode(
             {"sub": db_user.email, "id": db_user.id, "exp": datetime.now(timezone.utc) + access_token_expires},
             SECRET_KEY,
             algorithm="HS256"
         )
-        return {"access_token": access_token, "token_type": "bearer"}
+
+        refresh_token_expires = timedelta(days=30)
+        refresh_token = jwt.encode(
+            {"sub": db_user.email, "id": db_user.id, "type": "refresh", "exp": datetime.now(timezone.utc) + refresh_token_expires},
+            SECRET_KEY,
+            algorithm="HS256"
+        )
+
+        refresh_token_entry = RefreshToken(
+            token=refresh_token,
+            user_id=db_user.id,
+            created_at=datetime.now(timezone.utc),
+            expires_at=datetime.now(timezone.utc) + refresh_token_expires
+        )
+        self.db.add(refresh_token_entry)
+        self.db.commit()
+
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        }
 
 
     def logout_user(self, token: str, db: Session):
-        existing_logout = db.query(Logout).filter(Logout.token == token).first()
-        if existing_logout:
-            raise HTTPException(status_code=400, detail="Token already revoked")
+        try:
+            existing_logout = db.query(Logout).filter(Logout.token == token).first()
+            if existing_logout:
+                raise HTTPException(status_code=400, detail="Token already revoked")
 
-        revoked_token = Logout(token=token)
-        db.add(revoked_token)
-        db.commit()
-        return {"message": "Logged out successfully"}
+            revoked_token = Logout(token=token)
+            db.add(revoked_token)
+            
+            user = db.query(User).filter(User.email == jwt.decode(token, SECRET_KEY, algorithms=["HS256"])["sub"]).first()
+            if user:
+                refresh_token = db.query(RefreshToken).filter(RefreshToken.user_id == user.id).first()
+                if refresh_token:
+                    revoked_refresh = Logout(token=refresh_token.token)
+                    db.add(revoked_refresh)
+                    db.delete(refresh_token)
+
+            db.commit()
+            return {"message": "Logged out successfully"}
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=401, detail="Token expired")
+        except jwt.InvalidTokenError:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"Logout failed: {str(e)}")
+
+
+def refresh_token(self, refresh_token: str, db: Session):
+        try:
+            # Verify refresh token
+            payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=["HS256"])
+            email = payload.get("sub")
+            if not email or payload.get("type") != "refresh":
+                raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+            # Check if refresh token exists and is not revoked
+            token_entry = db.query(RefreshToken).filter(RefreshToken.token == refresh_token).first()
+            if not token_entry or token_entry.expires_at < datetime.now(timezone.utc):
+                raise HTTPException(status_code=401, detail="Refresh token invalid or expired")
+            revoked_token = db.query(Logout).filter(Logout.token == refresh_token).first()
+            if revoked_token:
+                raise HTTPException(status_code=401, detail="Refresh token revoked")
+
+            user = db.query(User).filter(User.email == email).first()
+            if not user:
+                raise HTTPException(status_code=401, detail="User not found")
+            if user.is_blocked:
+                raise HTTPException(status_code=403, detail="Account is blocked")
+
+            # Generate new access token
+            access_token_expires = timedelta(minutes=15)
+            new_access_token = jwt.encode(
+                {"sub": user.email, "id": user.id, "exp": datetime.now(timezone.utc) + access_token_expires},
+                SECRET_KEY,
+                algorithm="HS256"
+            )
+
+            # Revoke old refresh token and issue a new one
+            db.delete(token_entry)
+            new_refresh_token_expires = timedelta(days=30)
+            new_refresh_token = jwt.encode(
+                {"sub": user.email, "id": user.id, "type": "refresh", "exp": datetime.now(timezone.utc) + new_refresh_token_expires},
+                SECRET_KEY,
+                algorithm="HS256"
+            )
+            new_refresh_token_entry = RefreshToken(
+                token=new_refresh_token,
+                user_id=user.id,
+                created_at=datetime.now(timezone.utc),
+                expires_at=datetime.now(timezone.utc) + new_refresh_token_expires
+            )
+            db.add(new_refresh_token_entry)
+            db.commit()
+
+            return {
+                "access_token": new_access_token,
+                "refresh_token": new_refresh_token,
+                "token_type": "bearer"
+            }
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=401, detail="Refresh token expired")
+        except jwt.InvalidTokenError:
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
 
