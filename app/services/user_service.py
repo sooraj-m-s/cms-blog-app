@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
@@ -7,9 +8,10 @@ from app.models.user import User
 from app.models.logout import Logout
 from app.models.refresh_token import RefreshToken
 from app.schemas.user_schema import TokenRefreshRequest
-import jwt
+import jwt, logging
 
 
+logger = logging.getLogger(__name__)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class UserService:
@@ -18,62 +20,82 @@ class UserService:
 
 
     def register_user(self, user_data: dict):
-        db_user = self.db.query(User).filter(User.email == user_data["email"]).first()
-        if db_user:
-            raise HTTPException(status_code=400, detail="Email already registered")
-        if len(user_data["password"]) < 8:
-            raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
-        if user_data["password"] != user_data["confirm_password"]:
-            raise HTTPException(status_code=400, detail="Passwords do not match")
+        try:
+            db_user = self.db.query(User).filter(User.email == user_data["email"]).first()
+            if db_user:
+                raise HTTPException(status_code=400, detail="Email already registered")
+            if len(user_data["password"]) < 8:
+                raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
+            if user_data["password"] != user_data["confirm_password"]:
+                raise HTTPException(status_code=400, detail="Passwords do not match")
 
-        hashed_password = pwd_context.hash(user_data["password"])
-        new_user = User(
-            full_name=user_data["full_name"],
-            email=user_data["email"],
-            password=hashed_password,
-            created_at=datetime.now()
-        )
-        self.db.add(new_user)
-        self.db.commit()
-        self.db.refresh(new_user)
-        return {"message": "User registered successfully", "user_id": new_user.id}
+            hashed_password = pwd_context.hash(user_data["password"])
+            new_user = User(
+                full_name=user_data["full_name"],
+                email=user_data["email"],
+                password=hashed_password,
+                created_at=datetime.now()
+            )
+            self.db.add(new_user)
+            self.db.commit()
+            self.db.refresh(new_user)
+
+            return {"message": "User registered successfully", "user_id": new_user.id}
+        except HTTPException as e:
+            raise e
+        except KeyError as e:
+            logger.warning(f"Missing key in user_data: {e}")
+            raise HTTPException(status_code=422, detail=f"Missing field: {e}")
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            logger.error(f"Database error during user registration: {e}")
+            raise HTTPException(status_code=500, detail="Database error occurred")
+        except Exception as e:
+            logger.error(f"Unexpected error during user registration: {e}")
+            raise HTTPException(status_code=500, detail="Internal server error")
 
 
     def login_user(self, email: str, password: str):
-        db_user = self.db.query(User).filter(User.email == email).first()
-        if not db_user or not pwd_context.verify(password, db_user.password):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-        if db_user.is_blocked:
-            raise HTTPException(status_code=403, detail="Account is blocked, please contact support!")
+        try:
+            db_user = self.db.query(User).filter(User.email == email).first()
+            if not db_user or not pwd_context.verify(password, db_user.password):
+                raise HTTPException(status_code=401, detail="Invalid credentials")
+            if db_user.is_blocked:
+                raise HTTPException(status_code=403, detail="Account is blocked, please contact support!")
 
-        access_token_expires = timedelta(minutes=15)
-        access_token = jwt.encode(
-            {"sub": db_user.email, "id": db_user.id, "exp": datetime.now(timezone.utc) + access_token_expires},
-            SECRET_KEY,
-            algorithm="HS256"
-        )
+            access_token_expires = timedelta(minutes=15)
+            access_token = jwt.encode(
+                {"sub": db_user.email, "id": db_user.id, "exp": datetime.now(timezone.utc) + access_token_expires},
+                SECRET_KEY,
+                algorithm="HS256"
+            )
 
-        refresh_token_expires = timedelta(days=30)
-        refresh_token = jwt.encode(
-            {"sub": db_user.email, "id": db_user.id, "type": "refresh", "exp": datetime.now(timezone.utc) + refresh_token_expires},
-            SECRET_KEY,
-            algorithm="HS256"
-        )
+            refresh_token_expires = timedelta(days=30)
+            refresh_token = jwt.encode(
+                {"sub": db_user.email, "id": db_user.id, "type": "refresh", "exp": datetime.now(timezone.utc) + refresh_token_expires},
+                SECRET_KEY,
+                algorithm="HS256"
+            )
 
-        refresh_token_entry = RefreshToken(
-            token=refresh_token,
-            user_id=db_user.id,
-            created_at=datetime.now(timezone.utc),
-            expires_at=datetime.now(timezone.utc) + refresh_token_expires
-        )
-        self.db.add(refresh_token_entry)
-        self.db.commit()
+            refresh_token_entry = RefreshToken(
+                token=refresh_token,
+                user_id=db_user.id,
+                created_at=datetime.now(timezone.utc),
+                expires_at=datetime.now(timezone.utc) + refresh_token_expires
+            )
+            self.db.add(refresh_token_entry)
+            self.db.commit()
 
-        return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "bearer"
-        }
+            return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+        except HTTPException as e:  
+            raise e
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            logger.error(f"Database error during login for {email}: {e}")
+            raise HTTPException(status_code=500, detail="Database error occurred")
+        except Exception as e:
+            logger.exception(f"Unexpected error during login for {email}: {e}")
+            raise HTTPException(status_code=500, detail="Internal server error")
 
 
     def logout_user(self, token: str, db: Session):
@@ -92,15 +114,18 @@ class UserService:
                     revoked_refresh = Logout(token=refresh_token.token)
                     db.add(revoked_refresh)
                     db.delete(refresh_token)
-
             db.commit()
+
             return {"message": "Logged out successfully"}
+        except HTTPException as e:
+            raise e
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Token expired")
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail="Invalid token")
         except Exception as e:
             db.rollback()
+            logger.exception(f"Unexpected error during logout: {e}")
             raise HTTPException(status_code=500, detail=f"Logout failed: {str(e)}")
 
 
@@ -159,13 +184,19 @@ class UserService:
                 db.rollback()
                 raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-            return {
-                "access_token": new_access_token,
-                "refresh_token": new_refresh_token,
-                "token_type": "bearer"
-            }
+            return {"access_token": new_access_token, "refresh_token": new_refresh_token, "token_type": "bearer"}
+        except HTTPException as e:
+            raise e
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Refresh token expired")
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail="Invalid refresh token")
+        except SQLAlchemyError as e:
+            db.rollback()
+            logger.error(f"Database error during token refresh: {e}")
+            raise HTTPException(status_code=500, detail="Database error occurred")
+        except Exception as e:
+            db.rollback()
+            logger.exception(f"Unexpected error during token refresh: {e}")
+            raise HTTPException(status_code=500, detail="Internal server error")
 
