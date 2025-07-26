@@ -3,11 +3,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
+from fastapi.responses import JSONResponse
 from app.core.config import SECRET_KEY
 from app.models.user import User
 from app.models.logout import Logout
 from app.models.refresh_token import RefreshToken
-from app.schemas.user_schema import TokenRefreshRequest
 import jwt, logging
 
 
@@ -86,7 +86,11 @@ class UserService:
             self.db.add(refresh_token_entry)
             self.db.commit()
 
-            return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+            response = JSONResponse(content={"message": "Login successful"})
+            response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=15 * 60, samesite="Lax", secure=False)
+            response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, max_age=30 * 24 * 60 * 60, samesite="Lax", secure=False)
+
+            return response
         except HTTPException as e:  
             raise e
         except SQLAlchemyError as e:
@@ -129,11 +133,11 @@ class UserService:
             raise HTTPException(status_code=500, detail=f"Logout failed: {str(e)}")
 
 
-    def refresh_token(self, refresh_token: TokenRefreshRequest, db: Session):
+    def refresh_token(self, refresh_token: str, db: Session):
         try:
             # Verify refresh token
-            token_str = refresh_token.refresh_token
-            payload = jwt.decode(token_str, SECRET_KEY, algorithms=["HS256"])
+            token_str = refresh_token
+            payload = jwt.decode(token_str, SECRET_KEY, algorithm="HS256")
             email = payload.get("sub")
             if not email or payload.get("type") != "refresh":
                 raise HTTPException(status_code=401, detail="Invalid refresh token")
@@ -184,7 +188,11 @@ class UserService:
                 db.rollback()
                 raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-            return {"access_token": new_access_token, "refresh_token": new_refresh_token, "token_type": "bearer"}
+            response = JSONResponse(content={"message": "Token refreshed successfully"})
+            response.set_cookie(key="access_token", value=new_access_token, httponly=True, max_age=15 * 60, secure=False, samesite="lax")
+            response.set_cookie(key="refresh_token", value=new_refresh_token, httponly=True, max_age=30 * 24 * 60 * 60, secure=False, samesite="lax")
+
+            return response
         except HTTPException as e:
             raise e
         except jwt.ExpiredSignatureError:

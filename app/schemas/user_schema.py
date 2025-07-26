@@ -12,7 +12,3 @@ class Login(BaseModel):
     email: EmailStr
     password: str
 
-
-class TokenRefreshRequest(BaseModel):
-    refresh_token: str
-

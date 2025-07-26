@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
 import jwt, logging
+from app.models.refresh_token import RefreshToken
+from fastapi.responses import JSONResponse
 from app.models.user import User
 from app.models.blog import Blog
 from app.models.feedback import Feedback
@@ -26,14 +28,34 @@ class AdminService:
             if not db_user.is_admin:
                 raise HTTPException(status_code=403, detail="Admin access required")
 
-            access_token_expires = timedelta(days=2)
+            access_token_expires = timedelta(minutes=15)
             access_token = jwt.encode(
-                {"sub": db_user.email, "id": db_user.id, "is_admin": True, "exp": datetime.now(timezone.utc) + access_token_expires},
+                {"sub": db_user.email, "id": db_user.id, "exp": datetime.now(timezone.utc) + access_token_expires},
                 SECRET_KEY,
                 algorithm="HS256"
             )
 
-            return {"access_token": access_token, "token_type": "bearer"}
+            refresh_token_expires = timedelta(days=30)
+            refresh_token = jwt.encode(
+                {"sub": db_user.email, "id": db_user.id, "type": "refresh", "exp": datetime.now(timezone.utc) + refresh_token_expires},
+                SECRET_KEY,
+                algorithm="HS256"
+            )
+
+            refresh_token_entry = RefreshToken(
+                token=refresh_token,
+                user_id=db_user.id,
+                created_at=datetime.now(timezone.utc),
+                expires_at=datetime.now(timezone.utc) + refresh_token_expires
+            )
+            self.db.add(refresh_token_entry)
+            self.db.commit()
+
+            response = JSONResponse(content={"message": "Login successful"})
+            response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=15 * 60, secure=False, samesite="lax")
+            response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, max_age=30 * 24 * 60 * 60, secure=False, samesite="lax")
+            
+            return response
         except HTTPException as e:
             logger.warning(f"Admin login failed for {email}: {e.detail}")
             raise e
@@ -45,15 +67,32 @@ class AdminService:
             raise HTTPException(status_code=500, detail="Internal server error")
 
 
-    def admin_get_all_blogs(self):
+    def admin_get_all_blogs(self, page: int = 1, page_size: int = 10):
         try:
-            blogs = self.db.query(Blog).filter(Blog.is_deleted == False).all()
+            offset = (page - 1) * page_size
+            blogs = self.db.query(Blog).filter(Blog.is_deleted == False).offset(offset).limit(page_size).all()
+            total_blogs = self.db.query(Blog).filter(Blog.is_deleted == False).count()
+
             if not blogs:
                 raise HTTPException(status_code=404, detail="No blogs found")
             
-            return [{"id": blog.id, "title": blog.title, "content": blog.content, "image_url": blog.image_url,
-                    "is_blocked": blog.is_blocked, "created_at": blog.created_at, "updated_at": blog.updated_at}
-                    for blog in blogs]
+            return {
+                "blogs": [
+                    {
+                        "id": blog.id,
+                        "title": blog.title,
+                        "content": blog.content,
+                        "image_url": blog.image_url,
+                        "is_blocked": blog.is_blocked,
+                        "created_at": blog.created_at,
+                        "updated_at": blog.updated_at
+                    } for blog in blogs
+                ],
+                "total_blogs": total_blogs,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": (total_blogs + page_size - 1) // page_size
+            }
         except HTTPException as e:
             logger.warning(f"Error fetching blogs: {e.detail}")
             raise e
@@ -65,14 +104,29 @@ class AdminService:
             raise HTTPException(status_code=500, detail="Internal server error")
 
 
-    def list_all_users(self):
+    def list_all_users(self, page: int = 1, page_size: int = 10):
         try:
-            users = self.db.query(User).filter(User.is_admin == False).all()
+            offset = (page - 1) * page_size
+            users = self.db.query(User).filter(User.is_admin == False).offset(offset).limit(page_size).all()
+            total_users = self.db.query(User).filter(User.is_admin == False).count()
+
             if not users:
                 raise HTTPException(status_code=404, detail="No users found")
             
-            return [{"id": user.id, "email": user.email, "is_blocked": user.is_blocked, "created_at": user.created_at}
-                    for user in users]
+            return {
+                "users": [
+                    {
+                        "id": user.id,
+                        "email": user.email,
+                        "is_blocked": user.is_blocked,
+                        "created_at": user.created_at
+                    } for user in users
+                ],
+                "total_users": total_users,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": (total_users + page_size - 1) // page_size
+            }
         except HTTPException as e:
             logger.warning(f"Error listing users: {e.detail}")
             raise e
@@ -162,6 +216,45 @@ class AdminService:
         except Exception as e:
             self.db.rollback()
             logger.exception(f"Unexpected error while blocking/unblocking blog ID {blog_id}: {e}")
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+
+    def get_feedbacks(self, blog_id: int, page: int = 1, page_size: int = 10):
+        try:
+            blog = self.db.query(Blog).filter(Blog.id == blog_id).first()
+            if not blog:
+                raise HTTPException(status_code=404, detail="Blog not found")
+
+            offset = (page - 1) * page_size
+            feedbacks = self.db.query(Feedback).filter(Feedback.blog_id == blog_id, Feedback.is_deleted == False).offset(offset).limit(page_size).all()
+            total_feedbacks = self.db.query(Feedback).filter(Feedback.blog_id == blog_id, Feedback.is_deleted == False).count()
+
+            if not feedbacks:
+                raise HTTPException(status_code=404, detail="No feedbacks found for this blog")
+
+            return {
+                "feedbacks": [
+                    {
+                        "id": feedback.id,
+                        "user_id": feedback.user_id,
+                        "content": feedback.comment,
+                        "is_listed": feedback.is_listed,
+                        "created_at": feedback.created_at
+                    } for feedback in feedbacks
+                ],
+                "total_feedbacks": total_feedbacks,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": (total_feedbacks + page_size - 1) // page_size
+            }
+        except HTTPException as e:
+            logger.warning(f"Error fetching feedbacks for blog ID {blog_id}: {e.detail}")
+            raise e
+        except SQLAlchemyError as e:
+            logger.error(f"Database error while fetching feedbacks for blog ID {blog_id}: {e}")
+            raise HTTPException(status_code=500, detail="Database error occurred")
+        except Exception as e:
+            logger.exception(f"Unexpected error while fetching feedbacks for blog ID {blog_id}: {e}")
             raise HTTPException(status_code=500, detail="Internal server error")
 
 

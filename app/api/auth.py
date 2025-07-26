@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from app.db.database import get_db
-from app.schemas.user_schema import UserRegister, Login, TokenRefreshRequest
+from app.schemas.user_schema import UserRegister, Login
 from app.services.user_service import UserService
 from app.services.admin_service import AdminService
 from fastapi.security import OAuth2PasswordBearer
@@ -35,7 +35,8 @@ def admin_login(user: Login, db: Session = Depends(get_db)):
 
 
 @router.post("/refresh/")
-def refresh_token(refresh_token: TokenRefreshRequest, db: Session = Depends(get_db)):
+def refresh_token(request: Request, db: Session = Depends(get_db)):
+    token = request.cookies.get("refresh_token")
     user_service = UserService(db)
-    return user_service.refresh_token(refresh_token, db)
+    return user_service.refresh_token(token, db)
 

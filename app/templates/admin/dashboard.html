@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: #475569;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px var(--shadow);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logout-btn {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+
+        .tabs {
+            display: flex;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px var(--shadow);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 20px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--bg-primary);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        td {
+            color: var(--text-secondary);
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .status-blocked {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .status-listed {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent-primary);
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 0 4px;
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .pagination button.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top: 2px solid var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1001;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: var(--success);
+        }
+
+        .notification.error {
+            background: var(--danger);
+        }
+
+        .notification.warning {
+            background: var(--warning);
+        }
+
+        .search-container {
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .tab {
+                margin-bottom: 4px;
+            }
+
+            table {
+                font-size: 14px;
+            }
+
+            th, td {
+                padding: 12px 8px;
+            }
+
+            .modal-content {
+                padding: 20px;
+                margin: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Admin Dashboard</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('users')">Users Management</button>
+            <button class="tab" onclick="switchTab('blogs')">Blogs Management</button>
+            <button class="tab" onclick="switchTab('feedbacks')">Feedbacks Management</button>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="users-tab" class="tab-content active">
+            <div class="card">
+                <h2 style="margin-bottom: 20px;">Users Management</h2>
+                <div class="search-container">
+                    <input type="text" class="search-input" placeholder="Search users..." id="users-search">
+                </div>
+                <div class="loading" id="users-loading">
+                    <div class="spinner"></div>
+                    Loading users...
+                </div>
+                <div class="table-container">
+                    <table id="users-table" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Created At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="users-pagination"></div>
+            </div>
+        </div>
+
+        <!-- Blogs Tab -->
+        <div id="blogs-tab" class="tab-content">
+            <div class="card">
+                <h2 style="margin-bottom: 20px;">Blogs Management</h2>
+                <div class="search-container">
+                    <input type="text" class="search-input" placeholder="Search blogs..." id="blogs-search">
+                </div>
+                <div class="loading" id="blogs-loading">
+                    <div class="spinner"></div>
+                    Loading blogs...
+                </div>
+                <div class="table-container">
+                    <table id="blogs-table" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Title</th>
+                                <th>Status</th>
+                                <th>Created At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="blogs-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="blogs-pagination"></div>
+            </div>
+        </div>
+
+        <!-- Feedbacks Tab -->
+        <div id="feedbacks-tab" class="tab-content">
+            <div class="card">
+                <h2 style="margin-bottom: 20px;">Feedbacks Management</h2>
+                <div class="search-container">
+                    <input type="text" class="search-input" placeholder="Enter Blog ID to view feedbacks..." id="blog-id-input">
+                    <button class="btn btn-primary" onclick="loadFeedbacks()" style="margin-left: 10px;">Load Feedbacks</button>
+                </div>
+                <div class="loading" id="feedbacks-loading">
+                    <div class="spinner"></div>
+                    Loading feedbacks...
+                </div>
+                <div class="table-container">
+                    <table id="feedbacks-table" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>User ID</th>
+                                <th>Content</th>
+                                <th>Status</th>
+                                <th>Created At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="feedbacks-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="feedbacks-pagination"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Blog Modal -->
+    <div id="edit-blog-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Blog</h3>
+                <button class="close-btn" onclick="closeModal('edit-blog-modal')">&times;</button>
+            </div>
+            <form id="edit-blog-form">
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input type="text" class="form-input" id="edit-blog-title" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Content</label>
+                    <textarea class="form-textarea" id="edit-blog-content" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Image URL</label>
+                    <input type="url" class="form-input" id="edit-blog-image">
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-danger" onclick="closeModal('edit-blog-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-success">Update Blog</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = "{{ base_urll }}";
+
+        let currentTab = 'users';
+        let currentPage = {
+            users: 1,
+            blogs: 1,
+            feedbacks: 1
+        };
+        let currentBlogId = null;
+        let editingBlogId = null;
+
+        class TokenManager {
+            static async makeRequest(url, options = {}) {
+                try {
+                    console.log(`Making request to: ${url}`);
+                    
+                    const response = await fetch(url, {
+                        ...options,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...options.headers
+                        },
+                        credentials: 'include'
+                    });
+
+                    console.log(`Response status: ${response.status}`);
+
+                    // If unauthorized (401), try to refresh token
+                    if (response.status === 401) {
+                        console.log('Access token expired, attempting refresh...');
+                        const refreshed = await this.refreshToken();
+                        
+                        if (refreshed) {
+                            console.log('Token refreshed successfully, retrying request...');
+                            // Retry original request with new token
+                            return await fetch(url, {
+                                ...options,
+                                credentials: 'include',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    ...options.headers
+                                }
+                            });
+                        } else {
+                            console.log('Token refresh failed, redirecting to login');
+                            this.redirectToLogin();
+                            return null;
+                        }
+                    }
+
+                    return response;
+                } catch (error) {
+                    console.error('Request failed:', error);
+                    showNotification('error', 'Network error occurred');
+                    return null;
+                }
+            }
+
+            static async refreshToken() {
+                try {
+                    console.log('Attempting to refresh token...');
+                    const response = await fetch(`${BASE_URL}/refresh/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include' // Send refresh token cookie
+                    });
+
+                    if (response.ok) {
+                        console.log('Token refreshed successfully');
+                        return true;
+                    } else {
+                        const errorData = await response.json().catch(() => ({}));
+                        console.log('Token refresh failed:', errorData);
+                        return false;
+                    }
+                } catch (error) {
+                    console.error('Token refresh error:', error);
+                    return false;
+                }
+            }
+
+            static redirectToLogin() {
+                showNotification('warning', 'Session expired. Please login again.');
+                setTimeout(() => {
+                    window.location.href = '/admin/login/';
+                }, 2000);
+            }
+        }
+
+        // ==========================================
+        // NOTIFICATION SYSTEM
+        // ==========================================
+        function showNotification(type, message) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => notification.classList.add('show'), 100);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // ==========================================
+        // TAB MANAGEMENT
+        // ==========================================
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+
+            currentTab = tabName;
+
+            if (tabName === 'users') {
+                loadUsers();
+            } else if (tabName === 'blogs') {
+                loadBlogs();
+            }
+        }
+
+        // ==========================================
+        // PAGINATION SYSTEM
+        // ==========================================
+        function createPagination(containerId, currentPage, totalPages, loadFunction) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            const prevBtn = document.createElement('button');
+            prevBtn.textContent = 'Previous';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => {
+                if (currentPage > 1) {
+                    loadFunction(currentPage - 1);
+                }
+            };
+            container.appendChild(prevBtn);
+
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+
+            if (startPage > 1) {
+                const firstBtn = document.createElement('button');
+                firstBtn.textContent = '1';
+                firstBtn.onclick = () => loadFunction(1);
+                container.appendChild(firstBtn);
+
+                if (startPage > 2) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.textContent = '...';
+                    ellipsis.style.padding = '8px';
+                    ellipsis.style.color = 'var(--text-muted)';
+                    container.appendChild(ellipsis);
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.textContent = i;
+                pageBtn.className = i === currentPage ? 'active' : '';
+                pageBtn.onclick = () => loadFunction(i);
+                container.appendChild(pageBtn);
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.textContent = '...';
+                    ellipsis.style.padding = '8px';
+                    ellipsis.style.color = 'var(--text-muted)';
+                    container.appendChild(ellipsis);
+                }
+
+                const lastBtn = document.createElement('button');
+                lastBtn.textContent = totalPages;
+                lastBtn.onclick = () => loadFunction(totalPages);
+                container.appendChild(lastBtn);
+            }
+
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = 'Next';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => {
+                if (currentPage < totalPages) {
+                    loadFunction(currentPage + 1);
+                }
+            };
+            container.appendChild(nextBtn);
+        }
+
+        // ==========================================
+        // USERS MANAGEMENT
+        // ==========================================
+        async function loadUsers(page = 1) {
+            const loading = document.getElementById('users-loading');
+            const table = document.getElementById('users-table');
+            
+            loading.classList.add('show');
+            table.style.display = 'none';
+            
+            const response = await TokenManager.makeRequest(`${BASE_URL}/admin/list-users/?page=${page}&page_size=10`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
+            if (response && response.ok) {
+                const data = await response.json();
+                displayUsers(data.users);
+                createPagination('users-pagination', data.page, data.total_pages, loadUsers);
+                currentPage.users = page;
+                
+                loading.classList.remove('show');
+                table.style.display = 'table';
+            } else {
+                loading.classList.remove('show');
+                if (response) {
+                    const errorData = await response.json().catch(() => ({}));
+                    showNotification('error', errorData.detail || 'Failed to load users');
+                } else {
+                    showNotification('error', 'Failed to load users - no response');
+                }
+            }
+        }
+
+        function displayUsers(users) {
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = '';
+
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.id}</td>
+                    <td>${user.email}</td>
+                    <td>
+                        <span class="status-badge ${user.is_blocked ? 'status-blocked' : 'status-active'}">
+                            ${user.is_blocked ? 'Blocked' : 'Active'}
+                        </span>
+                    </td>
+                    <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn ${user.is_blocked ? 'btn-success' : 'btn-danger'}" 
+                                onclick="toggleUserBlock(${user.id}, ${user.is_blocked})">
+                            ${user.is_blocked ? 'Unblock' : 'Block'}
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function toggleUserBlock(userId, isBlocked) {
+            const response = await TokenManager.makeRequest(`${BASE_URL}/admin/block-unblock-user/${userId}`, {
+                method: 'PATCH',
+                credentials: 'include'
+            });
+
+            if (response && response.ok) {
+                const data = await response.json();
+                showNotification('success', data.message);
+                loadUsers(currentPage.users);
+            } else {
+                showNotification('error', 'Failed to update user status');
+            }
+        }
+
+        // ==========================================
+        // BLOGS MANAGEMENT
+        // ==========================================
+        async function loadBlogs(page = 1) {
+            const loading = document.getElementById('blogs-loading');
+            const table = document.getElementById('blogs-table');
+            
+            loading.classList.add('show');
+            table.style.display = 'none';
+
+            const response = await TokenManager.makeRequest(`${BASE_URL}/admin/landing/?page=${page}&page_size=10`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
+            if (response && response.ok) {
+                const data = await response.json();
+                displayBlogs(data.blogs);
+                createPagination('blogs-pagination', data.page, data.total_pages, loadBlogs);
+                currentPage.blogs = page;
+                
+                loading.classList.remove('show');
+                table.style.display = 'table';
+            } else {
+                loading.classList.remove('show');
+                if (response) {
+                    const errorData = await response.json().catch(() => ({}));
+                    showNotification('error', errorData.detail || 'Failed to load blogs');
+                }
+            }
+        }
+
+        function displayBlogs(blogs) {
+            const tbody = document.getElementById('blogs-tbody');
+            tbody.innerHTML = '';
+
+            blogs.forEach(blog => {
+                const row = document.createElement('tr');
+                const safeTitle = blog.title.replace(/'/g, "\\'").replace(/"/g, '\\"');
+                const safeContent = blog.content.replace(/'/g, "\\'").replace(/"/g, '\\"');
+                const safeImageUrl = (blog.image_url || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
+                
+                row.innerHTML = `
+                    <td>${blog.id}</td>
+                    <td>${blog.title.length > 50 ? blog.title.substring(0, 50) + '...' : blog.title}</td>
+                    <td>
+                        <span class="status-badge ${blog.is_blocked ? 'status-blocked' : 'status-active'}">
+                            ${blog.is_blocked ? 'Blocked' : 'Active'}
+                        </span>
+                    </td>
+                    <td>${new Date(blog.created_at).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="editBlog(${blog.id}, '${safeTitle}', '${safeContent}', '${safeImageUrl}')">
+                            Edit
+                        </button>
+                        <button class="btn ${blog.is_blocked ? 'btn-success' : 'btn-danger'}" 
+                                onclick="toggleBlogBlock(${blog.id}, ${blog.is_blocked})">
+                            ${blog.is_blocked ? 'Unblock' : 'Block'}
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function editBlog(blogId, title, content, imageUrl) {
+            editingBlogId = blogId;
+            document.getElementById('edit-blog-title').value = title;
+            document.getElementById('edit-blog-content').value = content;
+            document.getElementById('edit-blog-image').value = imageUrl;
+            document.getElementById('edit-blog-modal').classList.add('show');
+        }
+
+        async function toggleBlogBlock(blogId, isBlocked) {
+            const response = await TokenManager.makeRequest(`${BASE_URL}/admin/blogs/${blogId}/block/`, {
+                method: 'PATCH',
+                credentials: 'include'
+            });
+
+            if (response && response.ok) {
+                const data = await response.json();
+                showNotification('success', data.message);
+                loadBlogs(currentPage.blogs);
+            } else {
+                showNotification('error', 'Failed to update blog status');
+            }
+        }
+
+        // ==========================================
+        // FEEDBACKS MANAGEMENT
+        // ==========================================
+        async function loadFeedbacks(page = 1) {
+            const blogIdInput = document.getElementById('blog-id-input');
+            const blogId = blogIdInput.value.trim();
+
+            if (!blogId) {
+                showNotification('warning', 'Please enter a Blog ID');
+                return;
+            }
+
+            currentBlogId = blogId;
+            const loading = document.getElementById('feedbacks-loading');
+            const table = document.getElementById('feedbacks-table');
+            
+            loading.classList.add('show');
+            table.style.display = 'none';
+
+            const response = await TokenManager.makeRequest(`${BASE_URL}/admin/feedbacks/${blogId}/?page=${page}&page_size=10`, {
+                method: 'PATCH',
+                credentials: 'include'
+            });
+            
+            if (response && response.ok) {
+                const data = await response.json();
+                displayFeedbacks(data.feedbacks);
+                createPagination('feedbacks-pagination', data.page, data.total_pages, loadFeedbacks);
+                currentPage.feedbacks = page;
+                
+                loading.classList.remove('show');
+                table.style.display = 'table';
+            } else {
+                loading.classList.remove('show');
+                if (response) {
+                    const errorData = await response.json().catch(() => ({}));
+                    showNotification('error', errorData.detail || 'Failed to load feedbacks');
+                }
+            }
+        }
+
+        function displayFeedbacks(feedbacks) {
+            const tbody = document.getElementById('feedbacks-tbody');
+            tbody.innerHTML = '';
+
+            feedbacks.forEach(feedback => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${feedback.id}</td>
+                    <td>${feedback.user_id}</td>
+                    <td>${feedback.content.length > 100 ? feedback.content.substring(0, 100) + '...' : feedback.content}</td>
+                    <td>
+                        <span class="status-badge ${feedback.is_listed ? 'status-listed' : 'status-blocked'}">
+                            ${feedback.is_listed ? 'Listed' : 'Hidden'}
+                        </span>
+                    </td>
+                    <td>${new Date(feedback.created_at).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn ${feedback.is_listed ? 'btn-warning' : 'btn-success'}" 
+                                onclick="toggleFeedbackListed(${feedback.id}, ${feedback.is_listed})">
+                            ${feedback.is_listed ? 'Hide' : 'Show'}
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function toggleFeedbackListed(feedbackId, isListed) {
+            const response = await TokenManager.makeRequest(`${BASE_URL}/admin/feedbacks/${feedbackId}/toggle/`, {
+                method: 'PATCH',
+                credentials: 'include'
+            });
+
+            if (response && response.ok) {
+                const data = await response.json();
+                showNotification('success', data.message);
+                loadFeedbacks(currentPage.feedbacks);
+            } else {
+                showNotification('error', 'Failed to update feedback status');
+            }
+        }
+
+        // ==========================================
+        // MODAL MANAGEMENT
+        // ==========================================
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        // ==========================================
+        // FORM HANDLERS
+        // ==========================================
+        document.getElementById('edit-blog-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('title', document.getElementById('edit-blog-title').value);
+            formData.append('content', document.getElementById('edit-blog-content').value);
+            
+            const imageUrl = document.getElementById('edit-blog-image').value;
+            if (imageUrl) {
+                formData.append('image_url', imageUrl);
+            }
+
+            const response = await TokenManager.makeRequest(`${BASE_URL}/admin/blogs/${editingBlogId}`, {
+                method: 'PATCH',
+                body: formData,
+                headers: {},
+                credentials: 'include'
+            });
+
+            if (response && response.ok) {
+                const data = await response.json();
+                showNotification('success', data.message);
+                closeModal('edit-blog-modal');
+                loadBlogs(currentPage.blogs);
+            } else {
+                showNotification('error', 'Failed to update blog');
+            }
+        });
+
+        // ==========================================
+        // LOGOUT FUNCTION - FIXED FOR HTTPONLY COOKIES
+        // ==========================================
+        async function logout() {
+            try {
+                const response = await fetch(`${BASE_URL}/logout/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include' // Include cookies for logout
+                });
+
+                if (response.ok) {
+                    showNotification('success', 'Logged out successfully');
+                } else {
+                    showNotification('warning', 'Logout completed');
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                showNotification('warning', 'Logout completed');
+            }
+            
+            // Always redirect to login after logout attempt
+            setTimeout(() => {
+                window.location.href = '/admin/login/';
+            }, 1000);
+        }
+
+        // ==========================================
+        // SEARCH FUNCTIONALITY (PLACEHOLDER)
+        // ==========================================
+        document.getElementById('users-search').addEventListener('input', function(e) {
+            console.log('Searching users:', e.target.value);
+        });
+
+        document.getElementById('blogs-search').addEventListener('input', function(e) {
+            console.log('Searching blogs:', e.target.value);
+        });
+
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Admin Dashboard loaded - using httpOnly cookies');
+            loadUsers();
+        });
+
+        // Close modals when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>
