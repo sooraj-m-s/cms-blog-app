@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Detail</title>
+    <link rel="stylesheet" href="/static/css/blog.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo">BlogApp</div>
+        <div class="nav-buttons">
+            <a href="#" class="btn btn-secondary" onclick="goToLanding()">Home</a>
+            <a href="#" class="btn btn-secondary" onclick="goToMyBlogs()">My Blogs</a>
+            <button class="btn btn-primary" onclick="logout()">Logout</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="blogDetail" class="loading">Loading blog...</div>
+        
+        <div id="feedbackSection" class="feedback-section hidden">
+            <div class="feedback-header">
+                <h3>Feedback</h3>
+                <button class="btn btn-primary" onclick="toggleFeedbackForm()">Add Feedback</button>
+            </div>
+            
+            <div id="feedbackForm" class="feedback-form hidden">
+                <textarea id="feedbackText" placeholder="Write your feedback here..."></textarea>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="btn btn-primary" onclick="submitFeedback()">Submit</button>
+                    <button class="btn btn-secondary" onclick="cancelFeedback()">Cancel</button>
+                </div>
+            </div>
+            
+            <div id="feedbackList">
+                <div class="loading">Loading feedback...</div>
+            </div>
+            
+            <div id="feedbackPagination" class="pagination" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        window.BASE_URL = '{{ base_url }}';
+        
+        function displayBlogDetail(blog) {
+            const blogDetail = document.getElementById('blogDetail');
+            
+            blogDetail.innerHTML = `
+                <div class="blog-header">
+                    ${blog.image_url ? 
+                        `<img src="${blog.image_url}" alt="${blog.title}" class="blog-image">` :
+                        ''
+                    }
+                    <h1 class="blog-title">${blog.title}</h1>
+                    <div class="blog-meta">
+                        <div>
+                            <span>Views: ${blog.read_count}</span>
+                            <span style="margin-left: 1rem;">Feedback: ${blog.feedback_count}</span>
+                        </div>
+                        <span>${new Date(blog.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div class="blog-actions">
+                        <button class="action-btn" onclick="toggleLike(${blog.id}, this)">
+                            👍 <span>${blog.like_count}</span>
+                        </button>
+                        <button class="action-btn" onclick="toggleDislike(${blog.id}, this)">
+                            👎 <span>${blog.dislike_count}</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="blog-content">
+                    ${blog.content.replace(/\n/g, '<br>')}
+                </div>
+            `;
+        }
+
+        function displayFeedback(feedbacks) {
+            const feedbackList = document.getElementById('feedbackList');
+            
+            if (feedbacks.length === 0) {
+                feedbackList.innerHTML = '<div class="loading">No feedback yet.</div>';
+                return;
+            }
+
+            feedbackList.innerHTML = feedbacks.map(feedback => `
+                <div class="feedback-item">
+                    <div class="feedback-header-item">
+                        <span class="feedback-author">${feedback.username}</span>
+                        <span class="feedback-date">${new Date(feedback.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div class="feedback-content">${feedback.comment}</div>
+                    ${feedback.is_current_user_feedback ? `
+                        <div class="feedback-actions">
+                            <button class="btn btn-secondary btn-small" onclick="editFeedback(${feedback.id}, '${feedback.comment.replace(/'/g, "\\'")}')">Edit</button>
+                            <button class="btn btn-primary btn-small" onclick="deleteFeedback(${feedback.id})">Delete</button>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+
+            if (typeof window.setUserFeedback === 'function') {
+                window.setUserFeedback(feedbacks.find(f => f.is_current_user_feedback));
+            }
+        }
+
+        function updateFeedbackPagination(currentPage, totalPages) {
+            const pagination = document.getElementById('feedbackPagination');
+            
+            if (totalPages <= 1) {
+                pagination.style.display = 'none';
+                return;
+            }
+
+            pagination.style.display = 'flex';
+            
+            let paginationHTML = '';
+            
+            paginationHTML += `
+                <button class="page-btn" onclick="loadFeedback(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+                    Previous
+                </button>
+            `;
+            
+            for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                paginationHTML += `
+                    <button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadFeedback(${i})">
+                        ${i}
+                    </button>
+                `;
+            }
+            
+            paginationHTML += `
+                <button class="page-btn" onclick="loadFeedback(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+                    Next
+                </button>
+            `;
+            pagination.innerHTML = paginationHTML;
+        }
+
+        window.displayBlogDetail = displayBlogDetail;
+        window.displayFeedback = displayFeedback;
+        window.updateFeedbackPagination = updateFeedbackPagination;
+    </script>
+    <script src="/static/js/blog.js"></script>
+</body>
+</html>

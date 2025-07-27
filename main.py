@@ -18,16 +18,16 @@ app.add_middleware(
 )
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-app.include_router(router, tags=["auth"])
-app.include_router(blog_router, tags=["blog"])
-app.include_router(admin_router, prefix="/admin", tags=["admin"])
+
+app.include_router(router, prefix="/api", tags=["auth"])
+app.include_router(blog_router, prefix="/api", tags=["blog"])
+app.include_router(admin_router, prefix="/api/admin", tags=["admin"])
 
 
 # Views router for rendering templates
 
-app.include_router(user_view_router, tags=["auth_views"])
+app.include_router(user_view_router, prefix="/user", tags=["auth_views"])
 app.include_router(admin_view_router, prefix="/admin", tags=["admin_views"])
-
 
 
 

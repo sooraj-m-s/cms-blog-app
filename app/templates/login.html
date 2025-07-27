@@ -1,390 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Authentication - Blog Hub</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-        <link rel="stylesheet" href="/static/css/login.css">
-    </head>
-    <body>
-        <!-- Background decorations -->
-        <div class="bg-decoration decoration-1"></div>
-        <div class="bg-decoration decoration-2"></div>
-        <div class="bg-decoration decoration-3"></div>
-
-        <!-- Toast Container -->
-        <div id="toastContainer" class="toast-container"></div>
-
-        <div class="auth-container">
-            <!-- Floating elements -->
-            <div class="floating-element floating-1"></div>
-            <div class="floating-element floating-2"></div>
-
-            <!-- Login Form -->
-            <div id="loginForm" class="auth-form active">
-                <!-- Header -->
-                <div style="text-align: center; margin-bottom: 2rem;">
-                    <div class="icon-container">
-                        <i data-lucide="log-in" style="width: 2rem; height: 2rem; color: #6366f1;"></i>
-                    </div>
-                    <h2 style="font-size: 1.875rem; font-weight: 700; color: #f1f5f9; margin-bottom: 0.5rem;">Welcome Back</h2>
-                    <p style="color: #94a3b8; font-size: 0.875rem;">Sign in to your account</p>
-                </div>
-
-                <!-- Form -->
-                <form id="loginFormElement">
-                    <!-- Email field -->
-                    <div class="form-group">
-                        <label for="loginEmail" class="form-label">Email Address</label>
-                        <div class="input-container">
-                            <i data-lucide="mail" class="input-icon" style="width: 1.25rem; height: 1.25rem;"></i>
-                            <input type="email" id="loginEmail" name="email" required class="form-input" placeholder="Enter your email">
-                        </div>
-                    </div>
-
-                    <!-- Password field -->
-                    <div class="form-group">
-                        <label for="loginPassword" class="form-label">Password</label>
-                        <div class="input-container">
-                            <i data-lucide="lock" class="input-icon" style="width: 1.25rem; height: 1.25rem;"></i>
-                            <input type="password" id="loginPassword" name="password" required class="form-input" placeholder="Enter your password">
-                            <button type="button" id="loginPasswordToggle" class="password-toggle">
-                                <i data-lucide="eye" style="width: 1.25rem; height: 1.25rem;"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Submit button -->
-                    <button type="submit" class="submit-btn">
-                        <i data-lucide="log-in" style="width: 1rem; height: 1rem;"></i>
-                        <span>Sign In</span>
-                    </button>
-                </form>
-
-                <!-- Toggle to Register -->
-                <div class="auth-toggle">
-                    <p>Don't have an account? <button type="button" id="showRegister" class="toggle-link">Sign up</button></p>
-                </div>
-            </div>
-
-            <!-- Register Form -->
-            <div id="registerForm" class="auth-form">
-                <!-- Header -->
-                <div style="text-align: center; margin-bottom: 2rem;">
-                    <div class="icon-container">
-                        <i data-lucide="user-plus" style="width: 2rem; height: 2rem; color: #6366f1;"></i>
-                    </div>
-                    <h2 style="font-size: 1.875rem; font-weight: 700; color: #f1f5f9; margin-bottom: 0.5rem;">Create Account</h2>
-                    <p style="color: #94a3b8; font-size: 0.875rem;">Sign up for a new account</p>
-                </div>
-
-                <!-- Form -->
-                <form id="registerFormElement">
-                    <!-- Full Name field -->
-                    <div class="form-group">
-                        <label for="registerFullName" class="form-label">Full Name</label>
-                        <div class="input-container">
-                            <i data-lucide="user" class="input-icon" style="width: 1.25rem; height: 1.25rem;"></i>
-                            <input type="text" id="registerFullName" name="full_name" required class="form-input" placeholder="Enter your full name">
-                        </div>
-                    </div>
-
-                    <!-- Email field -->
-                    <div class="form-group">
-                        <label for="registerEmail" class="form-label">Email Address</label>
-                        <div class="input-container">
-                            <i data-lucide="mail" class="input-icon" style="width: 1.25rem; height: 1.25rem;"></i>
-                            <input type="email" id="registerEmail" name="email" required class="form-input" placeholder="Enter your email">
-                        </div>
-                    </div>
-
-                    <!-- Password field -->
-                    <div class="form-group">
-                        <label for="registerPassword" class="form-label">Password</label>
-                        <div class="input-container">
-                            <i data-lucide="lock" class="input-icon" style="width: 1.25rem; height: 1.25rem;"></i>
-                            <input type="password" id="registerPassword" name="password" required class="form-input" placeholder="Enter your password" minlength="8">
-                            <button type="button" id="registerPasswordToggle" class="password-toggle">
-                                <i data-lucide="eye" style="width: 1.25rem; height: 1.25rem;"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Confirm Password field -->
-                    <div class="form-group">
-                        <label for="registerConfirmPassword" class="form-label">Confirm Password</label>
-                        <div class="input-container">
-                            <i data-lucide="lock" class="input-icon" style="width: 1.25rem; height: 1.25rem;"></i>
-                            <input type="password" id="registerConfirmPassword" name="confirm_password" required class="form-input" placeholder="Confirm your password" minlength="8">
-                            <button type="button" id="registerConfirmPasswordToggle" class="password-toggle">
-                                <i data-lucide="eye" style="width: 1.25rem; height: 1.25rem;"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Submit button -->
-                    <button type="submit" class="submit-btn">
-                        <i data-lucide="user-plus" style="width: 1rem; height: 1rem;"></i>
-                        <span>Create Account</span>
-                    </button>
-                </form>
-
-                <!-- Toggle to Login -->
-                <div class="auth-toggle">
-                    <p>Already have an account? <button type="button" id="showLogin" class="toggle-link">Sign in</button></p>
-                </div>
-            </div>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog App - Login</title>
+    <link rel="stylesheet" href="/static/css/user_login.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Welcome Message -->
+        <div class="welcome-section">
+            <h2 id="welcomeTitle">Welcome Back!</h2>
+            <p id="welcomeMessage">Sign in.</p>
         </div>
 
-        <script>
-            // Initialize Lucide icons
-            lucide.createIcons();
+        <div class="form-toggle">
+            <button class="toggle-btn active" onclick="showLogin()">Login</button>
+            <button class="toggle-btn" onclick="showRegister()">Register</button>
+        </div>
 
-            // Toast functionality
-            class Toast {
-                constructor() {
-                    this.container = document.getElementById('toastContainer');
-                }
+        <!-- Login Form -->
+        <div id="loginForm" class="form-container active">
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" name="email" placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" name="password" placeholder="Enter your password">
+                    <button type="button" class="toggle-password" onclick="togglePassword('loginPassword', this)">
+                        👁️
+                    </button>
+                </div>
+                <button type="submit" class="btn" id="loginBtn">Login</button>
+            </form>
+        </div>
 
-                show(message, type = 'info', title = '', duration = 5000) {
-                    const toast = document.createElement('div');
-                    toast.className = `toast ${type}`;
+        <!-- Register Form -->
+        <div id="registerForm" class="form-container">
+            <form onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label for="fullName">Full Name</label>
+                    <input type="text" id="fullName" name="full_name" placeholder="Enter your full name">
+                    <div class="error-text" id="fullNameError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" name="email" placeholder="Enter your email">
+                    <div class="error-text" id="emailError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" name="password" placeholder="Enter your password">
+                    <button type="button" class="toggle-password" onclick="togglePassword('registerPassword', this)">
+                        👁️
+                    </button>
+                    <div class="error-text" id="passwordError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" name="confirm_password" placeholder="Confirm your password">
+                    <button type="button" class="toggle-password" onclick="togglePassword('confirmPassword', this)">
+                        👁️
+                    </button>
+                    <div class="error-text" id="confirmPasswordError"></div>
+                </div>
+                <button type="submit" class="btn" id="registerBtn">Register</button>
+            </form>
+        </div>
+    </div>
 
-                    const iconMap = {
-                        success: 'check-circle',
-                        error: 'x-circle',
-                        info: 'info'
-                    };
-
-                    const titleMap = {
-                        success: title || 'Success',
-                        error: title || 'Error',
-                        info: title || 'Info'
-                    };
-
-                    toast.innerHTML = `
-                        <i data-lucide="${iconMap[type]}" class="toast-icon"></i>
-                        <div class="toast-content">
-                            <div class="toast-title">${titleMap[type]}</div>
-                            <div class="toast-message">${message}</div>
-                        </div>
-                        <button class="toast-close" onclick="this.parentElement.remove()">
-                            <i data-lucide="x" style="width: 1rem; height: 1rem;"></i>
-                        </button>
-                    `;
-
-                    this.container.appendChild(toast);
-                    lucide.createIcons();
-
-                    // Show toast
-                    setTimeout(() => toast.classList.add('show'), 100);
-
-                    // Auto remove
-                    setTimeout(() => {
-                        toast.classList.remove('show');
-                        setTimeout(() => toast.remove(), 300);
-                    }, duration);
-                }
-
-                success(message, title = '') {
-                    this.show(message, 'success', title);
-                }
-
-                error(message, title = '') {
-                    this.show(message, 'error', title);
-                }
-
-                info(message, title = '') {
-                    this.show(message, 'info', title);
-                }
-            }
-
-            const toast = new Toast();
-
-            // DOM Elements
-            const loginForm = document.getElementById('loginForm');
-            const registerForm = document.getElementById('registerForm');
-            const showRegisterBtn = document.getElementById('showRegister');
-            const showLoginBtn = document.getElementById('showLogin');
-            const loginFormElement = document.getElementById('loginFormElement');
-            const registerFormElement = document.getElementById('registerFormElement');
-
-            // Form toggle functionality
-            showRegisterBtn.addEventListener('click', () => {
-                loginForm.classList.remove('active');
-                setTimeout(() => {
-                    registerForm.classList.add('active');
-                }, 150);
-            });
-
-            showLoginBtn.addEventListener('click', () => {
-                registerForm.classList.remove('active');
-                setTimeout(() => {
-                    loginForm.classList.add('active');
-                }, 150);
-            });
-
-            // Password toggle functionality
-            const passwordToggles = [
-                { toggle: 'loginPasswordToggle', input: 'loginPassword' },
-                { toggle: 'registerPasswordToggle', input: 'registerPassword' },
-                { toggle: 'registerConfirmPasswordToggle', input: 'registerConfirmPassword' }
-            ];
-
-            passwordToggles.forEach(({ toggle, input }) => {
-                const toggleBtn = document.getElementById(toggle);
-                const passwordInput = document.getElementById(input);
-                
-                toggleBtn.addEventListener('click', () => {
-                    const isPassword = passwordInput.type === 'password';
-                    passwordInput.type = isPassword ? 'text' : 'password';
-                    
-                    const icon = toggleBtn.querySelector('i');
-                    icon.setAttribute('data-lucide', isPassword ? 'eye-off' : 'eye');
-                    lucide.createIcons();
-                });
-            });
-
-            // Login form submission
-            loginFormElement.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                const submitBtn = e.target.querySelector('.submit-btn');
-                const originalContent = submitBtn.innerHTML;
-                
-                // Show loading state
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = `
-                    <div class="loading-spinner"></div>
-                    <span>Signing in...</span>
-                `;
-
-                const email = document.getElementById('loginEmail').value;
-                const password = document.getElementById('loginPassword').value;
-
-                try {
-                    const response = await fetch('http://127.0.0.1:8000/login/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            email: email,
-                            password: password
-                        })
-                    });
-
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.detail || 'Login failed');
-                    }
-
-                    const data = await response.json();
-                    const { access_token } = data;
-
-                    // Store token
-                    localStorage.setItem('token', access_token);
-                    
-                    // Show success toast
-                    toast.success('Login successful! Redirecting...', 'Welcome Back');
-
-                    // Redirect after a short delay
-                    setTimeout(() => {
-                        window.location.href = '/landing';
-                    }, 1500);
-
-                } catch (error) {
-                    toast.error(error.message || 'Login failed. Please try again.', 'Login Failed');
-                } finally {
-                    // Reset button state
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalContent;
-                    lucide.createIcons();
-                }
-            });
-
-            // Register form submission
-            registerFormElement.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                const submitBtn = e.target.querySelector('.submit-btn');
-                const originalContent = submitBtn.innerHTML;
-
-                // Get form data
-                const fullName = document.getElementById('registerFullName').value;
-                const email = document.getElementById('registerEmail').value;
-                const password = document.getElementById('registerPassword').value;
-                const confirmPassword = document.getElementById('registerConfirmPassword').value;
-
-                // Client-side validation
-                if (password.length < 8) {
-                    toast.error('Password must be at least 8 characters long.', 'Validation Error');
-                    return;
-                }
-
-                if (password !== confirmPassword) {
-                    toast.error('Passwords do not match.', 'Validation Error');
-                    return;
-                }
-
-                // Show loading state
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = `
-                    <div class="loading-spinner"></div>
-                    <span>Creating account...</span>
-                `;
-
-                try {
-                    const response = await fetch('http://127.0.0.1:8000/register/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            full_name: fullName,
-                            email: email,
-                            password: password,
-                            confirm_password: confirmPassword
-                        })
-                    });
-
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.detail || 'Registration failed');
-                    }
-
-                    const data = await response.json();
-                    
-                    // Show success toast
-                    toast.success('Account created successfully! Please sign in.', 'Registration Complete');
-
-                    // Clear form
-                    registerFormElement.reset();
-
-                    // Switch to login form after a short delay
-                    setTimeout(() => {
-                        registerForm.classList.remove('active');
-                        setTimeout(() => {
-                            loginForm.classList.add('active');
-                        }, 150);
-                    }, 2000);
-
-                } catch (error) {
-                    toast.error(error.message || 'Registration failed. Please try again.', 'Registration Failed');
-                } finally {
-                    // Reset button state
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalContent;
-                    lucide.createIcons();
-                }
-            });
-
-            // Initialize icons after DOM is loaded
-            document.addEventListener('DOMContentLoaded', () => {
-                lucide.createIcons();
-            });
-        </script>
-    </body>
+    <script>
+        window.BASE_URL = '{{ base_url }}';
+    </script>
+    <script src="/static/js/user_login.js"></script>
+</body>
 </html>

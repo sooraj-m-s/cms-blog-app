@@ -79,7 +79,7 @@ class BlogService:
             result = (
                 self.db.query(
                     Blog,
-                    func.count(case((Feedback.is_deleted == False, Feedback.is_listed == True, Feedback.id), else_=0)).label("feedback_count"),
+                    func.count(case((Feedback.is_deleted == False, Feedback.id), else_=0)).label("feedback_count"),
                     func.count(case((Like.is_like == True, Like.id), else_=0)).label("like_count"),
                     func.count(case((Like.is_like == False, Like.id), else_=0)).label("dislike_count"),
                 )
@@ -131,11 +131,11 @@ class BlogService:
                 raise HTTPException(status_code=400, detail="Title and content must not be empty")
             if self.db.query(Blog).filter(Blog.title == title).first():
                 raise HTTPException(status_code=400, detail="Blog title already exists")
-            if len(image) > 5 * 1024 * 1024:
-                raise HTTPException(status_code=400, detail="Image too large")
             
             blog = Blog(author_id=author_id, title=title, content=content)
             if image:
+                if len(image) > 5 * 1024 * 1024:
+                    raise HTTPException(status_code=400, detail="Image too large")
                 try:
                     img = Image.open(io.BytesIO(image))
                     img.verify()
@@ -210,8 +210,6 @@ class BlogService:
 
     def edit_blog(self, blog_id: int, author_id: int, title: str = None, content: str = None, image: bytes = None):
         try:
-            if len(image) > 5 * 1024 * 1024:
-                raise HTTPException(status_code=400, detail="Image too large")
             blog = self.db.query(Blog).filter(Blog.id == blog_id, Blog.author_id == author_id).first()
             if not blog:
                 raise HTTPException(status_code=404, detail="Blog not found or unauthorized")
@@ -222,6 +220,8 @@ class BlogService:
             if content:
                 blog.content = content
             if image:
+                if len(image) > 5 * 1024 * 1024:
+                    raise HTTPException(status_code=400, detail="Image too large")
                 if blog.image_url:
                     # Delete old image from S3
                     try:

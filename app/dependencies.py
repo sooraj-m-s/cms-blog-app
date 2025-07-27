@@ -27,11 +27,20 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
             raise HTTPException(status_code=401, detail="User not found")
         if user.is_blocked:
             raise HTTPException(status_code=403, detail="Account is blocked, please contact support!")
+        
         return user
-    except jwt.ExpiredSignatureError:
+    except HTTPException as e:
+        logger.warning(f"Auth error: {e.detail}")
+        raise e
+    except jwt.ExpiredSignatureError as e:
+        logger.error(f"Token expired: {e}")
         raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
+    except jwt.InvalidTokenError as e:
+        logger.error(f"Invalid token error: {e}")
         raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception as e:
+        logger.error(f"Internal server error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def get_current_admin(request: Request, db: Session = Depends(get_db)):
@@ -52,14 +61,18 @@ async def get_current_admin(request: Request, db: Session = Depends(get_db)):
             raise HTTPException(status_code=401, detail="User not found")
         if not user.is_admin:
             raise HTTPException(status_code=403, detail="Admin access required")
+        
         return user
+    except HTTPException as e:
+        logger.warning(f"Auth error: {e.detail}")
+        raise e
     except jwt.ExpiredSignatureError as e:
-        logger.error(f"Unexpected errorrrrrr1: {e}")
+        logger.error(f"Token expired: {e}")
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError as e:
-        logger.error(f"Unexpected errorrrrrr2: {e}")
+        logger.error(f"Invalid token error: {e}")
         raise HTTPException(status_code=401, detail="Invalid token")
     except Exception as e:
-        logger.error(f"Unexpected errorrrrrr3: {e}")
+        logger.error(f"Internal server error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 

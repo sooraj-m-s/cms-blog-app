@@ -26,12 +26,6 @@ def block_unblock_user(user_id: int, db: Session = Depends(get_db), current_admi
     return admin_service.block_unblock_user(user_id)
 
 
-@router.patch("/blogs/{blog_id}")
-def update_blog(blog_id: int, title: str = Form(None), content: str = Form(None), image: UploadFile = File(None), db: Session = Depends(get_db), current_admin: User = Depends(ca)):
-    admin_service = AdminService(db)
-    return admin_service.update_blog(blog_id, title, content, image)
-
-
 @router.patch("/blogs/{blog_id}/block/")
 def block_blog(blog_id: int, db: Session = Depends(get_db), current_admin: User = Depends(ca)):
     admin_service = AdminService(db)

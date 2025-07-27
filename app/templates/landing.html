@@ -1,212 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Blog Hub</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-        <link rel="stylesheet" href="/static/css/landing.css">
-    </head>
-    <body class="bg-gray-100">
-
-        <!-- Toast Container -->
-        <div id="toastContainer" class="toast-container"></div>
-
-        <!-- Header -->
-        <header class="bg-slate-900/50 backdrop-blur-lg border-b border-slate-700/50 sticky top-0 z-50">
-            <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-                <h1 class="text-2xl font-bold text-white flex items-center gap-2">
-                    <i data-lucide="book-open" class="w-6 h-6 text-indigo-400"></i>
-                    Blog Hub
-                </h1>
-                <div class="flex items-center gap-4">
-                    <!-- View Toggle Buttons -->
-                    <div class="flex gap-2">
-                        <button id="allBlogsBtn" onclick="showAllBlogs()" class="btn-secondary text-sm btn-active">
-                            <i data-lucide="globe" class="w-4 h-4"></i>
-                            All Blogs
-                        </button>
-                        <button id="myBlogsBtn" onclick="showMyBlogs()" class="btn-secondary text-sm">
-                            <i data-lucide="user" class="w-4 h-4"></i>
-                            My Blogs
-                        </button>
-                    </div>
-                    <span id="userInfo" class="text-slate-300"></span>
-                    <button onclick="logout()" class="btn-secondary text-sm">
-                        <i data-lucide="log-out" class="w-4 h-4"></i>
-                        Logout
-                    </button>
-                </div>
-            </div>
-        </header>
-
-        <!-- Main Content -->
-        <main class="container mx-auto px-4 py-8">
-            <div id="loadingSpinner" class="text-center py-12">
-                <div class="loading mx-auto mb-4"></div>
-                <p class="text-slate-400">Loading blogs...</p>
-            </div>
-
-            <div id="errorContainer" class="hidden">
-                <div class="error-message text-center">
-                    <p id="errorMessage"></p>
-                    <button onclick="loadCurrentView()" class="btn-primary mt-4">
-                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                        Retry
-                    </button>
-                </div>
-            </div>
-
-            <div id="blogsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Blogs will be loaded here -->
-            </div>
-        </main>
-
-        <!-- Feedback Modal -->
-        <div id="feedbackModal" class="modal">
-            <div class="modal-content">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold text-white">Blog Feedback</h2>
-                    <button onclick="closeFeedbackModal()" class="text-slate-400 hover:text-white">
-                        ✕
-                    </button>
-                </div>
-                <div id="feedbackContent">
-                    <!-- Feedback content will be loaded here -->
-                </div>
-            </div>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog App - Home</title>
+    <link rel="stylesheet" href="/static/css/landing.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo">BlogApp</div>
+        <div class="nav-buttons">
+            <a href="#" class="btn btn-secondary" onclick="goToMyBlogs()">My Blogs</a>
+            <button class="btn btn-primary" onclick="logout()">Logout</button>
         </div>
+    </header>
 
-        <!-- Blog Create/Edit Modal -->
-        <div id="blogModal" class="modal">
-            <div class="modal-content">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 id="blogModalTitle" class="text-xl font-bold text-white">Create New Blog</h2>
-                    <button onclick="closeBlogModal()" class="text-slate-400 hover:text-white">
-                        ✕
-                    </button>
-                </div>
-                <form id="blogForm" enctype="multipart/form-data">
-                    <div class="form-group">
-                        <label for="blogTitle" class="form-label">Title</label>
-                        <input type="text" id="blogTitle" name="title" class="form-input" placeholder="Enter blog title" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="blogContent" class="form-label">Content</label>
-                        <textarea id="blogContent" name="content" class="form-input" rows="6" placeholder="Write your blog content here..." required></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Image (Optional)</label>
-                        <div class="file-input" onclick="document.getElementById('blogImage').click()">
-                            <input type="file" id="blogImage" name="image" accept="image/*" style="display: none;" onchange="handleImageSelect(this)">
-                            <div id="imageUploadArea">
-                                <i data-lucide="upload" class="w-8 h-8 mx-auto mb-2 text-slate-400"></i>
-                                <p class="text-slate-400">Click to upload image or drag and drop</p>
-                                <p class="text-xs text-slate-500 mt-1">PNG, JPG, GIF up to 10MB</p>
-                            </div>
-                            <div id="imagePreview" class="hidden">
-                                <img id="previewImg" class="max-w-full h-32 object-cover rounded mx-auto mb-2">
-                                <p id="imageName" class="text-sm text-slate-300"></p>
-                                <button type="button" onclick="clearImage()" class="text-xs text-red-400 hover:text-red-300 mt-1">Remove</button>
-                            </div>
+    <div class="container">
+        <div id="blogGrid" class="blog-grid">
+            <div class="loading">Loading blogs...</div>
+        </div>
+        
+        <div id="pagination" class="pagination" style="display: none;"></div>
+    </div>
+
+    <script>
+        window.BASE_URL = '{{ base_url }}';
+        
+        function displayBlogs(blogs) {
+            const blogGrid = document.getElementById('blogGrid');
+            
+            if (blogs.length === 0) {
+                blogGrid.innerHTML = '<div class="loading">No blogs found.</div>';
+                return;
+            }
+
+            blogGrid.innerHTML = blogs.map(blog => `
+                <div class="blog-card" onclick="viewBlog(${blog.id})">
+                    ${blog.image_url ? 
+                        `<img src="${blog.image_url}" alt="${blog.title}" class="blog-image">` :
+                        `<div class="blog-image"></div>`
+                    }
+                    <div class="blog-content">
+                        <h3 class="blog-title">${blog.title}</h3>
+                        <p class="blog-excerpt">${blog.content.substring(0, 150)}...</p>
+                        <div class="blog-meta">
+                            <span>Views: ${blog.read_count}</span>
+                            <span>${new Date(blog.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div class="blog-actions" onclick="event.stopPropagation()">
+                            <button class="action-btn" onclick="toggleLike(${blog.id}, this)">
+                                👍 ${blog.like_count}
+                            </button>
+                            <button class="action-btn" onclick="toggleDislike(${blog.id}, this)">
+                                👎 ${blog.dislike_count}
+                            </button>
                         </div>
                     </div>
-                    
-                    <div class="flex gap-3">
-                        <button type="submit" id="blogSubmitBtn" class="btn-primary flex-1">
-                            <i data-lucide="save" class="w-4 h-4"></i>
-                            <span id="blogSubmitText">Create Blog</span>
-                        </button>
-                        <button type="button" onclick="closeBlogModal()" class="btn-secondary">
-                            Cancel
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                </div>
+            `).join('');
+        }
 
-        <footer class="bg-gray-800 text-white py-4 mt-8">
-            <div class="container mx-auto px-4 text-center">
-                <p>&copy; 2025 Blog Hub. All rights reserved.</p>
-            </div>
-        </footer>
-
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const blogsContainer = document.getElementById('blogsContainer');
-
-                // Function to create a blog card
-                function createBlogCard(blog) {
-                    const card = document.createElement('div');
-                    card.classList.add('blog-card', 'bg-white', 'rounded-lg', 'shadow-md');
-
-                    card.innerHTML = `
-                        <h2 class="text-xl font-semibold mb-2">${blog.title}</h2>
-                        <p class="text-gray-700 mb-4">${blog.content}</p>
-                        <div class="flex justify-between items-center text-sm text-slate-400 mb-4">
-                            <div class="flex items-center gap-4">
-                                <span class="flex items-center gap-1">
-                                    <i data-lucide="eye" class="w-4 h-4"></i>
-                                    <span class="view-count">${blog.views}</span>
-                                </span>
-                                <span class="flex items-center gap-1">
-                                    <i data-lucide="heart" class="w-4 h-4"></i>
-                                    <span class="like-count">${blog.likes}</span>
-                                </span>
-                                <span class="flex items-center gap-1">
-                                    <i data-lucide="thumbs-down" class="w-4 h-4"></i>
-                                    <span class="dislike-count">${blog.dislikes}</span>
-                                </span>
-                                <span class="flex items-center gap-1">
-                                    <i data-lucide="message-circle" class="w-4 h-4"></i>
-                                    <span class="comment-count">${blog.comments}</span>
-                                </span>
-                            </div>
-                        </div>
-                    `;
-
-                    return card;
-                }
-
-                lucide.createIcons();
-            });
-
-            function showAllBlogs() {
-                // Implementation for showing all blogs
+        function updatePagination(currentPage, totalPages) {
+            const pagination = document.getElementById('pagination');
+            
+            if (totalPages <= 1) {
+                pagination.style.display = 'none';
+                return;
             }
 
-            function showMyBlogs() {
-                // Implementation for showing my blogs
+            pagination.style.display = 'flex';
+            let paginationHTML = '';
+            
+            paginationHTML += `
+                <button class="page-btn" onclick="loadBlogs(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+                    Previous
+                </button>
+            `;
+            
+            for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                paginationHTML += `
+                    <button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadBlogs(${i})">
+                        ${i}
+                    </button>
+                `;
             }
+            
+            paginationHTML += `
+                <button class="page-btn" onclick="loadBlogs(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+                    Next
+                </button>
+            `;
+            
+            pagination.innerHTML = paginationHTML;
+        }
 
-            function logout() {
-                // Implementation for logout
-            }
-
-            function handleImageSelect(input) {
-                // Implementation for handling image selection
-            }
-
-            function clearImage() {
-                // Implementation for clearing image
-            }
-
-            function loadCurrentView() {
-                // Implementation for loading current view
-            }
-
-            function closeFeedbackModal() {
-                // Implementation for closing feedback modal
-            }
-
-            function closeBlogModal() {
-                // Implementation for closing blog modal
-            }
-        </script>
-
-        <script src="/static/js/landing.js"></script>
-    </body>
+        window.displayBlogs = displayBlogs;
+        window.updatePagination = updatePagination;
+    </script>
+    <script src="/static/js/landing.js"></script>
+</body>
 </html>

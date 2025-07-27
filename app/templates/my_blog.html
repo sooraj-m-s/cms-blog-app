@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Blogs</title>
+    <link rel="stylesheet" href="/static/css/my_blog.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo">BlogApp</div>
+        <div class="nav-buttons">
+            <a href="#" class="btn btn-secondary" onclick="goToLanding()">Home</a>
+            <button class="btn btn-primary" onclick="logout()">Logout</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="page-header">
+            <h1 class="page-title">My Blogs</h1>
+            <button class="btn btn-success" onclick="openCreateModal()">Create New Blog</button>
+        </div>
+
+        <div id="blogGrid" class="blog-grid">
+            <div class="loading">Loading your blogs...</div>
+        </div>
+        
+        <div id="pagination" class="pagination" style="display: none;"></div>
+    </div>
+
+    <!-- Create/Edit Blog Modal -->
+    <div id="blogModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Create New Blog</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            
+            <form id="blogForm" onsubmit="handleBlogSubmit(event)">
+                <div class="form-group">
+                    <label for="blogTitle">Title</label>
+                    <input type="text" id="blogTitle" name="title" placeholder="Enter blog title">
+                    <div class="error-text" id="titleError"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="blogContent">Content</label>
+                    <textarea id="blogContent" name="content" placeholder="Write your blog content here..."></textarea>
+                    <div class="error-text" id="contentError"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="blogImage">Image (Optional)</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="blogImage" name="image" accept="image/*" class="file-input">
+                        <div class="file-input-display">
+                            <span id="fileDisplayText">Click to select an image or drag and drop</span>
+                        </div>
+                    </div>
+                    <div class="error-text" id="imageError"></div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">Create Blog</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        window.BASE_URL = '{{ base_url }}';
+        
+        function displayBlogs(blogs) {
+            const blogGrid = document.getElementById('blogGrid');
+            
+            if (blogs.length === 0) {
+                blogGrid.innerHTML = '<div class="loading">No blogs found. Create your first blog!</div>';
+                return;
+            }
+
+            blogGrid.innerHTML = blogs.map(blog => `
+                <div class="blog-card">
+                    ${blog.image_url ? 
+                        `<img src="${blog.image_url}" alt="${blog.title}" class="blog-image">` :
+                        `<div class="blog-image"></div>`
+                    }
+                    <div class="blog-content">
+                        <h3 class="blog-title">${blog.title}</h3>
+                        <p class="blog-excerpt">${blog.content.substring(0, 150)}...</p>
+                        <div class="blog-meta">
+                            <span>Views: ${blog.read_count}</span>
+                            <span>${new Date(blog.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div class="blog-actions">
+                            <button class="btn btn-secondary btn-small" onclick="viewBlog(${blog.id})">View</button>
+                            <button class="btn btn-primary btn-small" onclick="editBlog(${blog.id})">Edit</button>
+                            <button class="btn btn-danger btn-small" onclick="deleteBlog(${blog.id})">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updatePagination(currentPage, totalPages) {
+            const pagination = document.getElementById('pagination');
+            
+            if (totalPages <= 1) {
+                pagination.style.display = 'none';
+                return;
+            }
+
+            pagination.style.display = 'flex';
+            
+            let paginationHTML = '';
+            
+            paginationHTML += `
+                <button class="page-btn" onclick="loadMyBlogs(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+                    Previous
+                </button>
+            `;
+            
+            for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                paginationHTML += `
+                    <button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadMyBlogs(${i})">
+                        ${i}
+                    </button>
+                `;
+            }
+            
+            paginationHTML += `
+                <button class="page-btn" onclick="loadMyBlogs(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+                    Next
+                </button>
+            `;
+            pagination.innerHTML = paginationHTML;
+        }
+
+        window.displayBlogs = displayBlogs;
+        window.updatePagination = updatePagination;
+    </script>
+    <script src="/static/js/my_blog.js"></script>
+</body>
+</html>

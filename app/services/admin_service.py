@@ -117,6 +117,7 @@ class AdminService:
                 "users": [
                     {
                         "id": user.id,
+                        "name": user.full_name,
                         "email": user.email,
                         "is_blocked": user.is_blocked,
                         "created_at": user.created_at
@@ -159,37 +160,6 @@ class AdminService:
         except Exception as e:
             self.db.rollback()
             logger.exception(f"Unexpected error while toggling block status for user ID {user_id}")
-            raise HTTPException(status_code=500, detail="Internal server error")
-
-
-    def update_blog(self, blog_id: int, title: str = None, content: str = None, image_url: str = None):
-        try:
-            blog = self.db.query(Blog).filter(Blog.id == blog_id).first()
-            if not blog:
-                raise HTTPException(status_code=404, detail="Blog not found")
-
-            if title is not None:
-                if self.db.query(Blog).filter(Blog.title == title, Blog.id != blog_id).first():
-                    raise HTTPException(status_code=400, detail="Blog title already exists")
-                blog.title = title
-            if content is not None:
-                blog.content = content
-            if image_url is not None:
-                blog.image_url = image_url
-
-            self.db.commit()
-            self.db.refresh(blog)
-            return {"message": "Blog updated successfully", "blog_id": blog.id}
-        except HTTPException as e:
-            logger.warning(f"Error updating blog ID {blog_id}: {e.detail}")
-            raise e
-        except SQLAlchemyError as e:
-            self.db.rollback()
-            logger.error(f"Database error during update of blog ID {blog_id}: error: {e}")
-            raise HTTPException(status_code=500, detail="Database error occurred")
-        except Exception as e:
-            self.db.rollback()
-            logger.exception(f"Unexpected error while updating blog ID {blog_id}: error: {e}")
             raise HTTPException(status_code=500, detail="Internal server error")
 
 
