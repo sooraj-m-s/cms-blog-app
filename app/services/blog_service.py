@@ -79,7 +79,6 @@ class BlogService:
             result = (
                 self.db.query(
                     Blog,
-                    func.count(case((Feedback.is_deleted == False, Feedback.id), else_=0)).label("feedback_count"),
                     func.count(case((Like.is_like == True, Like.id), else_=0)).label("like_count"),
                     func.count(case((Like.is_like == False, Like.id), else_=0)).label("dislike_count"),
                 )
@@ -106,7 +105,6 @@ class BlogService:
                 "content": blog.content,
                 "image_url": blog.image_url,
                 "read_count": blog.read_count,
-                "feedback_count": result.feedback_count,
                 "like_count": result.like_count,
                 "dislike_count": result.dislike_count,
                 "created_at": blog.created_at,

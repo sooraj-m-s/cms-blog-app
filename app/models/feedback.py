@@ -11,7 +11,7 @@ class Feedback(Base):
     blog_id = Column(Integer, ForeignKey("blogs.id"))
     user_id = Column(Integer, ForeignKey("users.id"))
     comment = Column(Text, nullable=False)
-    is_listed = Column(Boolean, default=False)
+    is_listed = Column(Boolean, default=True)
     is_deleted = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
