@@ -10,9 +10,9 @@ from app.schemas.blog_schema import FeedbackCreate
 router = APIRouter()
 
 @router.get("/landing/")
-def get_landing_page(db: Session = Depends(get_db), current_user: User = Depends(cu)):
+def get_landing_page(page: int = 1, page_size: int = 10, db: Session = Depends(get_db), current_user: User = Depends(cu)):
     blog_service = BlogService(db)
-    return {"blogs": blog_service.get_all_blogs(current_user.id)}
+    return {"blogs": blog_service.get_all_blogs(page, page_size)}
 
 
 @router.post("/blogs/")
@@ -23,9 +23,9 @@ async def create_blog(title: str = Form(...), content: str = Form(...), image: U
 
 
 @router.get("/blogs/")
-def list_user_blogs(db: Session = Depends(get_db), current_user: User = Depends(cu)):
+def list_user_blogs(page: int = 1, page_size: int = 10, db: Session = Depends(get_db), current_user: User = Depends(cu)):
     blog_service = BlogService(db)
-    return {"blogs": blog_service.get_user_blogs(current_user.id)}
+    return {"blogs": blog_service.get_user_blogs(current_user.id, page, page_size)}
 
 
 @router.put("/blogs/{blog_id}")
@@ -54,9 +54,9 @@ def dislike_or_undislike_blog(blog_id: int, db: Session = Depends(get_db), curre
 
 
 @router.get("/blogs/{blog_id}/feedbacks")
-def get_feedbacks(blog_id: int, db: Session = Depends(get_db), current_user: User = Depends(cu)):
+def get_feedbacks(blog_id: int, page: int = 1, page_size: int = 10, db: Session = Depends(get_db), current_user: User = Depends(cu)):
     blog_service = BlogService(db)
-    return blog_service.get_feedbacks(blog_id, current_user.id)
+    return blog_service.get_feedbacks(blog_id, current_user.id, page, page_size)
 
 
 @router.post("/blogs/{blog_id}/feedback")
