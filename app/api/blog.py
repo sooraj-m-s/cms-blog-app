@@ -15,6 +15,12 @@ def get_landing_page(page: int = 1, page_size: int = 10, db: Session = Depends(g
     return {"blogs": blog_service.get_all_blogs(page, page_size)}
 
 
+@router.get("/blog/{blog_id}/view/")
+def view_blog_detail(blog_id: int, db: Session = Depends(get_db), current_user: User = Depends(cu)):
+    blog_service = BlogService(db)
+    return {"blog": blog_service.view_blog_detail(blog_id, current_user.id)}
+
+
 @router.post("/blogs/")
 async def create_blog(title: str = Form(...), content: str = Form(...), image: UploadFile = File(None), db: Session = Depends(get_db), current_user: User = Depends(cu)):
     blog_service = BlogService(db)

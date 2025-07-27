@@ -27,7 +27,6 @@ class BlogService:
     def get_all_blogs(self, page: int = 1, page_size: int = 10):
         try:
             offset = (page - 1) * page_size
-            
             blogs_with_counts = (
                 self.db.query(
                     Blog.id,
@@ -72,6 +71,57 @@ class BlogService:
         except Exception as e:
             self.db.rollback()
             logger.exception(f"Unexpected error while fetching blogs: {e}")
+            raise HTTPException(status_code=500, detail="Internal server error")
+    
+
+    def view_blog_detail(self, blog_id: int, current_user_id: int):
+        try:
+            result = (
+                self.db.query(
+                    Blog,
+                    func.count(case((Feedback.is_deleted == False, Feedback.is_listed == True, Feedback.id), else_=0)).label("feedback_count"),
+                    func.count(case((Like.is_like == True, Like.id), else_=0)).label("like_count"),
+                    func.count(case((Like.is_like == False, Like.id), else_=0)).label("dislike_count"),
+                )
+                .outerjoin(Feedback, Blog.id == Feedback.blog_id)
+                .outerjoin(Like, Blog.id == Like.blog_id)
+                .filter(Blog.id == blog_id, Blog.is_deleted == False, Blog.is_blocked == False)
+                .group_by(Blog.id)
+                .first()
+            )
+            if not result:
+                raise HTTPException(status_code=404, detail="Blog not found")
+            blog = result[0]
+
+            existing_view = self.db.query(View).filter(View.blog_id == blog_id, View.user_id == current_user_id).first()
+            if not existing_view:
+                new_view = View(blog_id=blog_id, user_id=current_user_id)
+                self.db.add(new_view)
+                blog.read_count += 1
+                self.db.commit()
+
+            return {
+                "id": blog.id,
+                "title": blog.title,
+                "content": blog.content,
+                "image_url": blog.image_url,
+                "read_count": blog.read_count,
+                "feedback_count": result.feedback_count,
+                "like_count": result.like_count,
+                "dislike_count": result.dislike_count,
+                "created_at": blog.created_at,
+                "updated_at": blog.updated_at,
+            }
+        except HTTPException as e:
+            logger.warning(f"HTTP error while fetching blog: {e.detail}")
+            raise e
+        except SQLAlchemyError as e:
+            logger.error(f"Database error in view_blog: {e}")
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail="Database error occurred")
+        except Exception as e:
+            logger.exception(f"Unexpected error in view_blog: {e}")
+            self.db.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -270,8 +320,8 @@ class BlogService:
                 self.db.add(new_like)
                 self.db.commit()
                 self.db.refresh(new_like)
-                return {"message": "Blog liked successfully"}
         
+                return {"message": "Blog liked successfully"}
         except HTTPException as e:
             logger.warning(f"Validation error in like_or_unlike_blog: {e.detail}")
             raise e
@@ -309,6 +359,7 @@ class BlogService:
                 self.db.add(new_dislike)
                 self.db.commit()
                 self.db.refresh(new_dislike)
+
                 return {"message": "Blog disliked successfully"}
         except HTTPException as e:
             logger.warning(f"Validation error in dislike_or_undislike_blog: {e.detail}")
@@ -387,6 +438,7 @@ class BlogService:
             self.db.add(new_feedback)
             self.db.commit()
             self.db.refresh(new_feedback)
+
             return {"message": "Feedback created successfully", "feedback_id": new_feedback.id}
         except HTTPException as e:
             logger.warning(f"Validation error in create_feedback: {e.detail}")
@@ -413,6 +465,7 @@ class BlogService:
             feedback.updated_at = datetime.now(timezone.utc)
             self.db.commit()
             self.db.refresh(feedback)
+
             return {"message": "Feedback updated successfully"}
         except HTTPException as e:
             logger.warning(f"Validation error in edit_feedback: {e.detail}")
@@ -436,6 +489,7 @@ class BlogService:
             feedback.is_deleted = True
             feedback.updated_at = datetime.now(timezone.utc)
             self.db.commit()
+
             return {"message": "Feedback deleted successfully"}
         except HTTPException as e:
             logger.warning(f"Validation error in delete_feedback: {e.detail}")
