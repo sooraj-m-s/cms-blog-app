@@ -125,7 +125,7 @@ class BlogService:
 
     def create_blog(self, author_id: int, title: str, content: str, image: bytes = None):
         try:
-            if not re.match(r'^[A-Za-z ]+$', title) or len(title.strip()) < 4:
+            if not re.match(r'^[A-Za-z0-9 ]+$', title) or len(title.strip()) < 4:
                 raise HTTPException(status_code=400, detail="Title must be at least 4 characters and contain only letters and spaces")
             if not content.strip():
                 raise HTTPException(status_code=400, detail="Content must not be empty")
@@ -214,7 +214,7 @@ class BlogService:
             if not blog:
                 raise HTTPException(status_code=404, detail="Blog not found or unauthorized")
             if title:
-                if not re.match(r'^[A-Za-z ]+$', title) or len(title.strip()) < 4:
+                if not re.match(r'^[A-Za-z0-9 ]+$', title) or len(title.strip()) < 4:
                     raise HTTPException(status_code=400, detail="Title must be at least 4 characters and contain only letters and spaces")
                 if self.db.query(Blog).filter(Blog.title == title, Blog.id != blog_id).first():
                     raise HTTPException(status_code=400, detail="Blog title already exists")
