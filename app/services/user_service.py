@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import SECRET_KEY
 from app.models.user import User
 from app.models.logout import Logout
-import jwt, logging
+import jwt, logging, re
 
 
 logger = logging.getLogger(__name__)
@@ -22,13 +22,20 @@ class UserService:
 
     def register_user(self, user_data: dict):
         try:
+            if not re.match(r'^[A-Za-z ]+$', user_data["full_name"]) or len(user_data["full_name"].strip()) < 4:
+                raise HTTPException(status_code=400, detail="Name must be at least 4 characters and contain only letters and spaces")
+            if len(user_data["password"].strip()) < 8:
+                raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
+            if not re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).+$', user_data["password"]):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Password must include at least one uppercase letter, one lowercase letter, and one special character"
+                )
+            if user_data["password"] != user_data["confirm_password"]:
+                raise HTTPException(status_code=400, detail="Passwords do not match")
             db_user = self.db.query(User).filter(User.email == user_data["email"]).first()
             if db_user:
                 raise HTTPException(status_code=400, detail="Email already registered")
-            if len(user_data["password"]) < 8:
-                raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
-            if user_data["password"] != user_data["confirm_password"]:
-                raise HTTPException(status_code=400, detail="Passwords do not match")
 
             hashed_password = pwd_context.hash(user_data["password"])
             new_user = User(
@@ -41,7 +48,7 @@ class UserService:
             self.db.commit()
             self.db.refresh(new_user)
 
-            return {"message": "User registered successfully", "user_id": new_user.id}
+            return {"message": "User registered successfully"}
         except HTTPException as e:
             raise e
         except KeyError as e:

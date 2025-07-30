@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-import boto3, logging, io
+import boto3, logging, io, re
 from datetime import datetime, timezone
 from fastapi import HTTPException
 from sqlalchemy import func, case
@@ -125,8 +125,10 @@ class BlogService:
 
     def create_blog(self, author_id: int, title: str, content: str, image: bytes = None):
         try:
-            if not title.strip() or not content.strip():
-                raise HTTPException(status_code=400, detail="Title and content must not be empty")
+            if not re.match(r'^[A-Za-z ]+$', title) or len(title.strip()) < 4:
+                raise HTTPException(status_code=400, detail="Title must be at least 4 characters and contain only letters and spaces")
+            if not content.strip():
+                raise HTTPException(status_code=400, detail="Content must not be empty")
             if self.db.query(Blog).filter(Blog.title == title).first():
                 raise HTTPException(status_code=400, detail="Blog title already exists")
             
@@ -212,10 +214,14 @@ class BlogService:
             if not blog:
                 raise HTTPException(status_code=404, detail="Blog not found or unauthorized")
             if title:
+                if not re.match(r'^[A-Za-z ]+$', title) or len(title.strip()) < 4:
+                    raise HTTPException(status_code=400, detail="Title must be at least 4 characters and contain only letters and spaces")
                 if self.db.query(Blog).filter(Blog.title == title, Blog.id != blog_id).first():
                     raise HTTPException(status_code=400, detail="Blog title already exists")
                 blog.title = title
             if content:
+                if not content.strip():
+                    raise HTTPException(status_code=400, detail="Content must not be empty")
                 blog.content = content
             if image:
                 if len(image) > 5 * 1024 * 1024:

@@ -149,7 +149,7 @@ async function submitFeedback() {
     let response
     if (editingFeedbackId) {
       response = await makeAuthenticatedRequest(`${BASE_URL}/api/blogs/feedback/${editingFeedbackId}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
@@ -200,7 +200,7 @@ async function deleteFeedback(feedbackId) {
   }
 
   try {
-    const response = await makeAuthenticatedRequest(`${BASE_URL}/api/blogs/feedback/${feedbackId}`, {
+    const response = await makeAuthenticatedRequest(`${BASE_URL}/api/blogs/feedback/${feedbackId}/delete/`, {
       method: "DELETE",
     })
 

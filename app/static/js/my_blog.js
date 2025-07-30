@@ -156,9 +156,9 @@ function validateBlogForm() {
   const content = document.getElementById("blogContent").value.trim()
   const image = document.getElementById("blogImage").files[0]
 
-  if (title.length < 3) {
+  if (title.length < 4) {
     const titleError = document.getElementById("titleError")
-    if (titleError) titleError.textContent = "Title must be at least 3 characters"
+    if (titleError) titleError.textContent = "Title must be at least 4 characters"
     isValid = false
   }
 
@@ -205,7 +205,7 @@ async function handleBlogSubmit(event) {
     let response
     if (editingBlogId) {
       response = await makeAuthenticatedRequest(`${BASE_URL}/api/blogs/${editingBlogId}`, {
-        method: "PUT",
+        method: "PATCH",
         body: formData,
       })
     } else {
@@ -242,7 +242,7 @@ async function deleteBlog(blogId) {
 
   try {
     const response = await makeAuthenticatedRequest(`${BASE_URL}/api/blogs/${blogId}/delete/`, {
-      method: "PATCH",
+      method: "DELETE",
     })
 
     if (!response) return

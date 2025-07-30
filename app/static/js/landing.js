@@ -95,7 +95,7 @@ async function loadBlogs(page = 1) {
 async function toggleLike(blogId, button) {
     try {
         const response = await makeAuthenticatedRequest(`${BASE_URL}/api/blogs/${blogId}/like`, {
-            method: 'POST'
+            method: 'PATCH'
         });
 
         if (!response) return;
@@ -133,7 +133,7 @@ async function toggleLike(blogId, button) {
 async function toggleDislike(blogId, button) {
     try {
         const response = await makeAuthenticatedRequest(`${BASE_URL}/api/blogs/${blogId}/dislike`, {
-            method: 'POST'
+            method: 'PATCH'
         });
 
         if (!response) return;

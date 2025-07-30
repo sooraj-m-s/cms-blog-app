@@ -240,7 +240,7 @@ async function loadFeedbacks(page = 1) {
   const response = await TokenManager.makeRequest(
     `${BASE_URL}/api/admin/feedbacks/${blogId}/?page=${page}&page_size=10`,
     {
-      method: "PATCH",
+      method: "GET",
       credentials: "include",
     },
   )
