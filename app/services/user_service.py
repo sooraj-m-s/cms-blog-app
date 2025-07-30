@@ -7,12 +7,13 @@ from fastapi.responses import JSONResponse
 from app.core.config import SECRET_KEY
 from app.models.user import User
 from app.models.logout import Logout
-from app.models.refresh_token import RefreshToken
 import jwt, logging
 
 
 logger = logging.getLogger(__name__)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+access_token_expires = timedelta(minutes=15)
+refresh_token_expires = timedelta(days=30)
 
 class UserService:
     def __init__(self, db: Session):
@@ -63,32 +64,21 @@ class UserService:
             if db_user.is_blocked:
                 raise HTTPException(status_code=403, detail="Account is blocked, please contact support!")
 
-            access_token_expires = timedelta(minutes=15)
+            # Generate token
             access_token = jwt.encode(
                 {"sub": db_user.email, "id": db_user.id, "exp": datetime.now(timezone.utc) + access_token_expires},
                 SECRET_KEY,
                 algorithm="HS256"
             )
-
-            refresh_token_expires = timedelta(days=30)
             refresh_token = jwt.encode(
                 {"sub": db_user.email, "id": db_user.id, "type": "refresh", "exp": datetime.now(timezone.utc) + refresh_token_expires},
                 SECRET_KEY,
                 algorithm="HS256"
             )
 
-            refresh_token_entry = RefreshToken(
-                token=refresh_token,
-                user_id=db_user.id,
-                created_at=datetime.now(timezone.utc),
-                expires_at=datetime.now(timezone.utc) + refresh_token_expires
-            )
-            self.db.add(refresh_token_entry)
-            self.db.commit()
-
             response = JSONResponse(content={"message": "Login successful"})
-            response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=15 * 60, samesite="Lax", secure=False)
-            response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, max_age=30 * 24 * 60 * 60, samesite="Lax", secure=False)
+            response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=access_token_expires, samesite="Lax", secure=False)
+            response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, max_age=refresh_token_expires, samesite="Lax", secure=False)
 
             return response
         except HTTPException as e:  
@@ -102,11 +92,12 @@ class UserService:
             raise HTTPException(status_code=500, detail="Internal server error")
 
 
-    def logout_user(self, token: str, db: Session, user_id):
+    def logout_user(self, access_token: str, refresh_token: str, db: Session, user_id):
         try:
-            revoked_token = Logout(token=token)
-            db.add(revoked_token)
-            self.db.query(RefreshToken).filter(RefreshToken.user_id == user_id).delete()
+            revoked_access_token = Logout(token=access_token)
+            revoked_refresh_token = Logout(token=refresh_token)
+            db.add(revoked_access_token)
+            db.add(revoked_refresh_token)
             db.commit()
 
             return {"message": "Logged out successfully"}
@@ -129,14 +120,11 @@ class UserService:
             email = payload.get("sub")
             if not email:
                 raise HTTPException(status_code=401, detail="Invalid refresh token")
-
-            # Check if refresh token exists and is not revoked
-            token_entry = db.query(RefreshToken).filter(RefreshToken.token == token_str).first()
-            if not token_entry:
-                raise HTTPException(status_code=401, detail="Refresh token not found")
-            # Convert expires_at to aware datetime for comparison
-            expires_at = token_entry.expires_at.replace(tzinfo=timezone.utc) if token_entry.expires_at else datetime.min.replace(tzinfo=timezone.utc)
-            if expires_at < datetime.now(timezone.utc):
+            token_entry = db.query(Logout).filter(Logout.token == token_str).first()
+            if token_entry:
+                raise HTTPException(status_code=401, detail="Unauthorized!")
+            exp_timestamp = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
+            if exp_timestamp < datetime.now(timezone.utc):
                 raise HTTPException(status_code=401, detail="Refresh token expired")
 
             user = db.query(User).filter(User.email == email).first()
@@ -145,33 +133,21 @@ class UserService:
             if user.is_blocked:
                 raise HTTPException(status_code=403, detail="Account is blocked")
 
-            # Generate new access token
-            access_token_expires = timedelta(minutes=15)
+            # Generate new token
             new_access_token = jwt.encode(
                 {"sub": user.email, "id": user.id, "exp": datetime.now(timezone.utc) + access_token_expires},
                 SECRET_KEY,
                 algorithm="HS256"
             )
-
-            db.delete(token_entry)
-            new_refresh_token_expires = timedelta(days=30)
             new_refresh_token = jwt.encode(
-                {"sub": user.email, "id": user.id, "type": "refresh", "exp": datetime.now(timezone.utc) + new_refresh_token_expires},
+                {"sub": user.email, "id": user.id, "type": "refresh", "exp": datetime.now(timezone.utc) + refresh_token_expires},
                 SECRET_KEY,
                 algorithm="HS256"
             )
-            new_refresh_token_entry = RefreshToken(
-                token=new_refresh_token,
-                user_id=user.id,
-                created_at=datetime.now(timezone.utc),
-                expires_at=datetime.now(timezone.utc) + new_refresh_token_expires
-            )
-            db.add(new_refresh_token_entry)
-            db.commit()
 
             response = JSONResponse(content={"message": "Token refreshed successfully"})
-            response.set_cookie(key="access_token", value=new_access_token, httponly=True, max_age=15 * 60, secure=False, samesite="lax")
-            response.set_cookie(key="refresh_token", value=new_refresh_token, httponly=True, max_age=30 * 24 * 60 * 60, secure=False, samesite="lax")
+            response.set_cookie(key="access_token", value=new_access_token, httponly=True, max_age=access_token_expires, secure=False, samesite="lax")
+            response.set_cookie(key="refresh_token", value=new_refresh_token, httponly=True, max_age=refresh_token_expires, secure=False, samesite="lax")
 
             return response
         except HTTPException as e:

@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
 import jwt, logging
-from app.models.refresh_token import RefreshToken
 from fastapi.responses import JSONResponse
 from app.models.user import User
 from app.models.blog import Blog
@@ -14,6 +13,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger(__name__)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+access_token_expires = timedelta(minutes=15)
+refresh_token_expires = timedelta(days=30)
 
 class AdminService:
     def __init__(self, db: Session):
@@ -28,32 +29,21 @@ class AdminService:
             if not db_user.is_admin:
                 raise HTTPException(status_code=403, detail="Admin access required")
 
-            access_token_expires = timedelta(minutes=15)
+            # Generate token
             access_token = jwt.encode(
                 {"sub": db_user.email, "id": db_user.id, "exp": datetime.now(timezone.utc) + access_token_expires},
                 SECRET_KEY,
                 algorithm="HS256"
             )
-
-            refresh_token_expires = timedelta(days=30)
             refresh_token = jwt.encode(
                 {"sub": db_user.email, "id": db_user.id, "type": "refresh", "exp": datetime.now(timezone.utc) + refresh_token_expires},
                 SECRET_KEY,
                 algorithm="HS256"
             )
 
-            refresh_token_entry = RefreshToken(
-                token=refresh_token,
-                user_id=db_user.id,
-                created_at=datetime.now(timezone.utc),
-                expires_at=datetime.now(timezone.utc) + refresh_token_expires
-            )
-            self.db.add(refresh_token_entry)
-            self.db.commit()
-
             response = JSONResponse(content={"message": "Login successful"})
-            response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=15 * 60, secure=False, samesite="lax")
-            response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, max_age=30 * 24 * 60 * 60, secure=False, samesite="lax")
+            response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=access_token_expires, secure=False, samesite="lax")
+            response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, max_age=refresh_token_expires, secure=False, samesite="lax")
             
             return response
         except HTTPException as e:

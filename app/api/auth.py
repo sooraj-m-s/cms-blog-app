@@ -26,9 +26,10 @@ def login(user: Login, db: Session = Depends(get_db)):
 
 @router.post("/logout/")
 def logout(request: Request, db: Session = Depends(get_db),  current_user: User = Depends(cu)):
-    token = request.cookies.get("access_token")
+    access_token = request.cookies.get("access_token")
+    refresh_token = request.cookies.get('refresh_token')
     user_service = UserService(db)
-    return user_service.logout_user(token, db, current_user.id)
+    return user_service.logout_user(access_token, refresh_token, db, current_user.id)
 
 
 @router.post("/admin/login/")
