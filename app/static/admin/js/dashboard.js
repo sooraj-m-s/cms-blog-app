@@ -157,6 +157,13 @@ async function loadUsers(page = 1) {
 }
 
 async function toggleUserBlock(userId, isBlocked) {
+  const confirmMsg = isBlocked
+    ? "Are you sure you want to unblock this user?"
+    : "Are you sure you want to block this user?";
+  if (!window.confirm(confirmMsg)) {
+    return;
+  }
+  
   const response = await TokenManager.makeRequest(`${BASE_URL}/api/admin/block-unblock-user/${userId}`, {
     method: "PATCH",
     credentials: "include",
@@ -206,6 +213,13 @@ async function loadBlogs(page = 1) {
 }
 
 async function toggleBlogBlock(blogId, isBlocked) {
+  const confirmMsg = isBlocked
+    ? "Are you sure you want to unblock this blog?"
+    : "Are you sure you want to block this blog?";
+  if (!window.confirm(confirmMsg)) {
+    return;
+  }
+
   const response = await TokenManager.makeRequest(`${BASE_URL}/api/admin/blogs/${blogId}/block/`, {
     method: "PATCH",
     credentials: "include",
@@ -267,6 +281,13 @@ async function loadFeedbacks(page = 1) {
 }
 
 async function toggleFeedbackListed(feedbackId, isListed) {
+  const confirmMsg = isListed
+    ? "Are you sure you want to hide this feedback?"
+    : "Are you sure you want to show this feedback?";
+  if (!window.confirm(confirmMsg)) {
+    return;
+  }
+  
   const response = await TokenManager.makeRequest(`${BASE_URL}/api/admin/feedbacks/${feedbackId}/toggle/`, {
     method: "PATCH",
     credentials: "include",
